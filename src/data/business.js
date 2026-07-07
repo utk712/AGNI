@@ -1,7 +1,7 @@
 export const business = {
   name: "Akshaya Glow Naturals",
-  phoneDisplay: "+91 87123 18547",
-  whatsappNumber: "918712318547",
+  phoneDisplay: "+91 9302579140",
+  whatsappNumber: "919302579140",
   email: "hello@akshayaglow.com",
 };
 
