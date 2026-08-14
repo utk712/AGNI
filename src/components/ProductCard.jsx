@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
-import { IngredientStamp, WhatsApp, Star, ShoppingBag, ArrowRight } from "./Icons";
-import { business, whatsappLink } from "../data/business";
+import { IngredientStamp, ShoppingBag } from "./Icons";
 import { useCart } from "../context/CartContext";
 
 function ProductCard({ product }) {
-  const { addToCart, openCart } = useCart();
+  const { addToCart } = useCart();
 
   const isFreeGift = product.numericPrice === 0;
 
@@ -32,13 +31,6 @@ function ProductCard({ product }) {
       </Link>
 
       <div className="product-card-body">
-        <div className="product-rating-row">
-          <span className="rating-stars-inline">
-            <Star className="star-filled" /> {product.rating || 4.9}
-          </span>
-          <span className="reviews-count">({product.reviewsCount || 40})</span>
-        </div>
-
         <Link to={`/product/${product.id}`} className="product-card-title">
           <h3>{product.name}</h3>
         </Link>

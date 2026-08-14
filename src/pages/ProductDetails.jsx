@@ -5,7 +5,7 @@ import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
 import { business, whatsappLink } from "../data/business";
-import { WhatsApp, Star, ShoppingBag, Leaf, Check, ArrowRight } from "../components/Icons";
+import { WhatsApp, ShoppingBag, Check, ArrowRight } from "../components/Icons";
 
 function ProductDetails() {
   const { id } = useParams();
@@ -69,16 +69,6 @@ function ProductDetails() {
             <span className="eyebrow">{product.categoryLabel || "100% Handcrafted"}</span>
             <h1 className="detail-title">{product.name}</h1>
             <p className="detail-tagline">{product.tagline}</p>
-
-            <div className="detail-rating-row">
-              <div className="rating-stars-inline">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="star-filled" />
-                ))}
-              </div>
-              <span className="rating-num">{product.rating || 4.9}</span>
-              <span className="rating-count">({product.reviewsCount || 40} verified buyer reviews)</span>
-            </div>
 
             <div className="detail-price-box">
               <h2 className="detail-price">{product.price}</h2>
