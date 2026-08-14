@@ -48,12 +48,12 @@ export function ProductProvider({ children }) {
     }
   }, []);
 
-  // Fetch Cloud Master state (Prioritized over stale mobile cache)
+  // Fetch Cloud Master state (Tightly integrated with Vercel /api/store)
   useEffect(() => {
     async function syncWithCloudMaster() {
       const cloudData = await fetchCloudStore();
       if (cloudData && typeof cloudData === "object") {
-        if (cloudData.products && Array.isArray(cloudData.products)) {
+        if (cloudData.products && Array.isArray(cloudData.products) && cloudData.products.length > 0) {
           setProducts(cloudData.products);
           localStorage.setItem("agni_custom_products", JSON.stringify(cloudData.products));
         }
@@ -75,10 +75,10 @@ export function ProductProvider({ children }) {
 
     syncWithCloudMaster();
 
-    // Auto-sync with live cloud database every 10 seconds for real-time updates!
+    // Auto-sync with Vercel API endpoint every 5 seconds for live cross-device updates!
     const pollInterval = setInterval(() => {
       syncWithCloudMaster();
-    }, 10000);
+    }, 5000);
 
     return () => clearInterval(pollInterval);
   }, []);
