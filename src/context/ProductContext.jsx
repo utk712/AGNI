@@ -3,19 +3,28 @@ import initialProducts from "../data/products";
 import { fetchCloudStore, saveCloudStore } from "../services/cloudSync";
 
 const ProductContext = createContext();
-const MASTER_PIN_DEFAULT = "231204";
+
+const DEFAULT_OWNER_PROFILE = {
+  isConfigured: true,
+  name: "Owner",
+  phone: "9302579140",
+  email: "akshayaglownaturals@gmail.com",
+  password: "231204",
+};
 
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState(initialProducts);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [adminPin, setAdminPin] = useState(() => {
+  const [ownerProfile, setOwnerProfile] = useState(() => {
     try {
-      return localStorage.getItem("agni_admin_pin") || MASTER_PIN_DEFAULT;
+      const saved = localStorage.getItem("agni_owner_profile");
+      return saved ? JSON.parse(saved) : DEFAULT_OWNER_PROFILE;
     } catch {
-      return MASTER_PIN_DEFAULT;
+      return DEFAULT_OWNER_PROFILE;
     }
   });
+
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
   // Load from local storage cache initially
@@ -32,8 +41,8 @@ export function ProductProvider({ children }) {
       const savedExps = localStorage.getItem("agni_expenses");
       if (savedExps) setExpenses(JSON.parse(savedExps));
 
-      const savedPin = localStorage.getItem("agni_admin_pin");
-      if (savedPin) setAdminPin(savedPin);
+      const savedProfile = localStorage.getItem("agni_owner_profile");
+      if (savedProfile) setOwnerProfile(JSON.parse(savedProfile));
     } catch (e) {
       console.error("Local storage load error", e);
     }
@@ -56,9 +65,9 @@ export function ProductProvider({ children }) {
           setExpenses(cloudData.expenses);
           localStorage.setItem("agni_expenses", JSON.stringify(cloudData.expenses));
         }
-        if (cloudData.adminPin) {
-          setAdminPin(cloudData.adminPin);
-          localStorage.setItem("agni_admin_pin", cloudData.adminPin);
+        if (cloudData.ownerProfile && typeof cloudData.ownerProfile === "object") {
+          setOwnerProfile(cloudData.ownerProfile);
+          localStorage.setItem("agni_owner_profile", JSON.stringify(cloudData.ownerProfile));
         }
       }
       setIsCloudLoaded(true);
@@ -67,14 +76,26 @@ export function ProductProvider({ children }) {
   }, []);
 
   // Helper to persist all data to Cloud Master
-  const persistState = (newProds, newOrders, newExps, newPin) => {
+  const persistState = (newProds, newOrders, newExps, newProfile) => {
     const dataToSave = {
       products: newProds !== undefined ? newProds : products,
       customerOrders: newOrders !== undefined ? newOrders : customerOrders,
       expenses: newExps !== undefined ? newExps : expenses,
-      adminPin: newPin !== undefined ? newPin : adminPin,
+      ownerProfile: newProfile !== undefined ? newProfile : ownerProfile,
     };
     saveCloudStore(dataToSave);
+  };
+
+  const updateOwnerProfile = (newDetails) => {
+    const updated = {
+      ...ownerProfile,
+      ...newDetails,
+      isConfigured: true,
+    };
+    setOwnerProfile(updated);
+    localStorage.setItem("agni_owner_profile", JSON.stringify(updated));
+    persistState(products, customerOrders, expenses, updated);
+    return updated;
   };
 
   const addProduct = (newProd) => {
@@ -92,7 +113,7 @@ export function ProductProvider({ children }) {
     const updated = [productToAdd, ...products];
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses, adminPin);
+    persistState(updated, customerOrders, expenses, ownerProfile);
     return productToAdd;
   };
 
@@ -113,26 +134,20 @@ export function ProductProvider({ children }) {
     });
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses, adminPin);
+    persistState(updated, customerOrders, expenses, ownerProfile);
   };
 
   const deleteProduct = (id) => {
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses, adminPin);
+    persistState(updated, customerOrders, expenses, ownerProfile);
   };
 
   const resetDefaultProducts = () => {
     setProducts(initialProducts);
     localStorage.setItem("agni_custom_products", JSON.stringify(initialProducts));
-    persistState(initialProducts, customerOrders, expenses, adminPin);
-  };
-
-  const updateAdminPin = (newPin) => {
-    setAdminPin(newPin);
-    localStorage.setItem("agni_admin_pin", newPin);
-    persistState(products, customerOrders, expenses, newPin);
+    persistState(initialProducts, customerOrders, expenses, ownerProfile);
   };
 
   const createCustomerOrder = (orderData) => {
@@ -152,7 +167,7 @@ export function ProductProvider({ children }) {
     const updatedOrders = [newOrder, ...customerOrders];
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses, adminPin);
+    persistState(products, updatedOrders, expenses, ownerProfile);
     return newOrder;
   };
 
@@ -162,14 +177,14 @@ export function ProductProvider({ children }) {
     );
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses, adminPin);
+    persistState(products, updatedOrders, expenses, ownerProfile);
   };
 
   const deleteCustomerOrder = (orderId) => {
     const updatedOrders = customerOrders.filter((o) => o.id !== orderId);
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses, adminPin);
+    persistState(products, updatedOrders, expenses, ownerProfile);
   };
 
   const addExpense = (exp) => {
@@ -182,25 +197,25 @@ export function ProductProvider({ children }) {
     const updatedExpenses = [newExp, ...expenses];
     setExpenses(updatedExpenses);
     localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
-    persistState(products, customerOrders, updatedExpenses, adminPin);
+    persistState(products, customerOrders, updatedExpenses, ownerProfile);
   };
 
   const deleteExpense = (id) => {
     const updatedExpenses = expenses.filter((e) => e.id !== id);
     setExpenses(updatedExpenses);
     localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
-    persistState(products, customerOrders, updatedExpenses, adminPin);
+    persistState(products, customerOrders, updatedExpenses, ownerProfile);
   };
 
   const purgeStaleMobileCache = async () => {
     localStorage.clear();
-    localStorage.setItem("agni_admin_pin", adminPin);
+    localStorage.setItem("agni_owner_profile", JSON.stringify(ownerProfile));
     const cloudData = await fetchCloudStore();
     if (cloudData) {
       if (cloudData.products) setProducts(cloudData.products);
       if (cloudData.customerOrders) setCustomerOrders(cloudData.customerOrders);
       if (cloudData.expenses) setExpenses(cloudData.expenses);
-      if (cloudData.adminPin) setAdminPin(cloudData.adminPin);
+      if (cloudData.ownerProfile) setOwnerProfile(cloudData.ownerProfile);
     }
   };
 
@@ -212,8 +227,6 @@ export function ProductProvider({ children }) {
         updateProduct,
         deleteProduct,
         resetDefaultProducts,
-        adminPin,
-        updateAdminPin,
         customerOrders,
         createCustomerOrder,
         updateOrderStatus,
@@ -221,6 +234,8 @@ export function ProductProvider({ children }) {
         expenses,
         addExpense,
         deleteExpense,
+        ownerProfile,
+        updateOwnerProfile,
         isCloudLoaded,
         purgeStaleMobileCache,
       }}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProducts } from "../context/ProductContext";
 import Footer from "../components/Footer";
 import { Trash, Check, Sparkles, ArrowRight, ShoppingBag, Refresh } from "../components/Icons";
@@ -10,14 +10,14 @@ function Admin() {
     updateProduct,
     deleteProduct,
     resetDefaultProducts,
-    adminPin,
-    updateAdminPin,
     customerOrders,
     updateOrderStatus,
     deleteCustomerOrder,
     expenses,
     addExpense,
     deleteExpense,
+    ownerProfile,
+    updateOwnerProfile,
     isCloudLoaded,
     purgeStaleMobileCache,
   } = useProducts();
@@ -26,8 +26,23 @@ function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinError, setPinError] = useState("");
 
-  const [activeSection, setActiveSection] = useState("dashboard"); // 'dashboard' | 'orders' | 'accounting' | 'products' | 'pin'
+  const [activeSection, setActiveSection] = useState("dashboard"); // 'dashboard' | 'orders' | 'accounting' | 'products' | 'profile'
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Owner Setup / Update Form State
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
+
+  useEffect(() => {
+    if (ownerProfile) {
+      setOwnerName(ownerProfile.name || "");
+      setOwnerPhone(ownerProfile.phone || "");
+      setOwnerEmail(ownerProfile.email || "");
+      setOwnerPassword(ownerProfile.password || "");
+    }
+  }, [ownerProfile]);
 
   // Product Form State
   const [name, setName] = useState("");
@@ -48,17 +63,31 @@ function Admin() {
   const [expCategory, setExpCategory] = useState("Raw Materials");
   const [expDate, setExpDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // PIN state
-  const [newPinInput, setNewPinInput] = useState("");
-
   const handleLogin = (e) => {
     e.preventDefault();
-    if (inputPin === adminPin || inputPin === "231204") {
+    const currentPassword = ownerProfile?.password || "231204";
+    if (inputPin === currentPassword || inputPin === "231204") {
       setIsAuthenticated(true);
       setPinError("");
     } else {
-      setPinError("Incorrect Owner PIN code. Please try again.");
+      setPinError("Incorrect password. Please enter your created Owner password.");
     }
+  };
+
+  const handleSaveOwnerProfile = (e) => {
+    e.preventDefault();
+    if (!ownerPassword) {
+      alert("Please enter a custom password.");
+      return;
+    }
+    updateOwnerProfile({
+      name: ownerName || "Owner",
+      phone: ownerPhone,
+      email: ownerEmail,
+      password: ownerPassword,
+    });
+    setSuccessMsg("Owner profile & password successfully updated and synced across all devices!");
+    setTimeout(() => setSuccessMsg(""), 4000);
   };
 
   const handleImageFileChange = (e) => {
@@ -135,17 +164,6 @@ function Admin() {
     setExpAmount("");
   };
 
-  const handlePinChange = (e) => {
-    e.preventDefault();
-    if (newPinInput.length < 4) {
-      alert("PIN code must be at least 4 digits.");
-      return;
-    }
-    updateAdminPin(newPinInput);
-    setNewPinInput("");
-    alert("Owner PIN code successfully updated in Cloud Master!");
-  };
-
   const handlePurgeMobileCache = async () => {
     await purgeStaleMobileCache();
     alert("Mobile cache successfully cleared & synced with Cloud Master!");
@@ -198,12 +216,12 @@ function Admin() {
         <div className="admin-login-card">
           <div className="admin-badge">🔐 Owner Access Portal</div>
           <h2>Akshaya Glow Naturals</h2>
-          <p>Please enter your Owner PIN code to unlock your business dashboard.</p>
+          <p>Please enter your Owner password to access your dashboard.</p>
 
           <form onSubmit={handleLogin} className="admin-pin-form">
             <input
               type="password"
-              placeholder="Enter PIN (e.g. 231204)"
+              placeholder="Enter Your Password"
               value={inputPin}
               onChange={(e) => setInputPin(e.target.value)}
               autoFocus
@@ -229,7 +247,7 @@ function Admin() {
           <div className="sidebar-header">
             <span className="sidebar-brand">🌿 AGNI Owner Studio</span>
             <div className="cloud-sync-chip">
-              <span className="dot-green"></span> Cloud Master Active
+              <span className="dot-green"></span> {ownerProfile?.name ? `Hello, ${ownerProfile.name}` : "Cloud Active"}
             </div>
           </div>
 
@@ -262,10 +280,10 @@ function Admin() {
               🛍️ Products &amp; Combos ({products.length})
             </button>
             <button
-              className={`sidebar-link ${activeSection === "pin" ? "active" : ""}`}
-              onClick={() => setActiveSection("pin")}
+              className={`sidebar-link ${activeSection === "profile" ? "active" : ""}`}
+              onClick={() => setActiveSection("profile")}
             >
-              🔑 Security PIN
+              👤 Owner Details &amp; Password
             </button>
           </nav>
 
@@ -878,34 +896,71 @@ function Admin() {
             </div>
           )}
 
-          {/* SECTION 5: SECURITY PIN */}
-          {activeSection === "pin" && (
+          {/* SECTION 5: OWNER DETAILS & PASSWORD */}
+          {activeSection === "profile" && (
             <div className="admin-section-block">
               <div className="admin-section-header">
                 <div>
-                  <span className="eyebrow"><Sparkles /> Security</span>
-                  <h1>Owner Security PIN &amp; Cloud Sync</h1>
+                  <span className="eyebrow"><Sparkles /> Owner Profile</span>
+                  <h1>Owner Account &amp; Password</h1>
                 </div>
               </div>
 
               <div className="admin-panel-box">
-                <h2>Change Owner Security PIN</h2>
-                <p>Updating the PIN here saves it to the Cloud Master so your Laptop, Mobile phone, and all devices share the exact same PIN!</p>
-                <form onSubmit={handlePinChange} className="admin-pin-change-form">
-                  <div className="form-group">
-                    <label htmlFor="new-pin">New 4-Digit Owner PIN</label>
-                    <input
-                      id="new-pin"
-                      type="password"
-                      placeholder="e.g. 231204"
-                      value={newPinInput}
-                      onChange={(e) => setNewPinInput(e.target.value)}
-                      maxLength={8}
-                      required
-                    />
+                <h2>Manage Owner Credentials</h2>
+                <p>Enter your details and custom password below. Your password will automatically sync across your Laptop, Mobile phone, and all devices via Cloud Master!</p>
+                
+                <form onSubmit={handleSaveOwnerProfile} className="admin-add-form">
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label htmlFor="o-name">Owner Full Name *</label>
+                      <input
+                        id="o-name"
+                        type="text"
+                        placeholder="e.g. Utkarsh"
+                        value={ownerName}
+                        onChange={(e) => setOwnerName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="o-phone">WhatsApp Business Phone</label>
+                      <input
+                        id="o-phone"
+                        type="tel"
+                        placeholder="e.g. 9302579140"
+                        value={ownerPhone}
+                        onChange={(e) => setOwnerPhone(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <button type="submit" className="btn btn-primary btn-block">
-                    Update Owner PIN
+
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label htmlFor="o-email">Business Email</label>
+                      <input
+                        id="o-email"
+                        type="email"
+                        placeholder="e.g. akshayaglownaturals@gmail.com"
+                        value={ownerEmail}
+                        onChange={(e) => setOwnerEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="o-pass">Your Custom Security Password *</label>
+                      <input
+                        id="o-pass"
+                        type="text"
+                        placeholder="Enter your personal password"
+                        value={ownerPassword}
+                        onChange={(e) => setOwnerPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: "16px" }}>
+                    Save Owner Details &amp; Sync Password Across Devices
                   </button>
                 </form>
 
