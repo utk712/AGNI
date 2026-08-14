@@ -27,14 +27,40 @@ export function ProductProvider({ children }) {
     }
   });
 
-  // Sales Orders Ledger
-  const [salesOrders, setSalesOrders] = useState(() => {
+  // Customer Orders (automatically created when customer orders via WhatsApp)
+  const [customerOrders, setCustomerOrders] = useState(() => {
     try {
-      const saved = localStorage.getItem("agni_sales_orders");
+      const saved = localStorage.getItem("agni_customer_orders");
       return saved ? JSON.parse(saved) : [
-        { id: 1, customerName: "Pooja Sharma", productName: "Rose Water (100ml)", quantity: 2, amount: 120, date: "2026-08-01", notes: "WhatsApp Order" },
-        { id: 2, customerName: "Ananya R.", productName: "ABC Powder (100g)", quantity: 1, amount: 120, date: "2026-08-05", notes: "Combo Customer" },
-        { id: 3, customerName: "Sneha P.", productName: "Beetroot Lip Balm", quantity: 3, amount: 120, date: "2026-08-10", notes: "Direct Sale" }
+        {
+          id: 101,
+          customerName: "Ananya Sharma",
+          phone: "9876543210",
+          address: "Flat 402, Lotus Apartments, Hyderabad - 500081",
+          items: [
+            { name: "Rose Water", size: "100ml", quantity: 2, price: 60 },
+            { name: "Beetroot Lip Balm", size: "20g", quantity: 1, price: 40 }
+          ],
+          subtotal: 160,
+          totalAmount: 160,
+          status: "Shipped", // Pending | Shipped | Delivered | Cancelled
+          date: "2026-08-12",
+          freeGift: true
+        },
+        {
+          id: 102,
+          customerName: "Rahul Verma",
+          phone: "9123456789",
+          address: "B-12, Sector 5, Gurgaon - 122001",
+          items: [
+            { name: "ABC Powder", size: "100g", quantity: 1, price: 120 }
+          ],
+          subtotal: 120,
+          totalAmount: 160,
+          status: "Pending",
+          date: "2026-08-14",
+          freeGift: false
+        }
       ];
     } catch {
       return [];
@@ -64,11 +90,11 @@ export function ProductProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("agni_sales_orders", JSON.stringify(salesOrders));
+      localStorage.setItem("agni_customer_orders", JSON.stringify(customerOrders));
     } catch (e) {
       console.error(e);
     }
-  }, [salesOrders]);
+  }, [customerOrders]);
 
   useEffect(() => {
     try {
@@ -135,20 +161,33 @@ export function ProductProvider({ children }) {
     }
   };
 
-  // Ledger functions
-  const addSalesOrder = (order) => {
+  // Automatic Order Creation from Cart Checkout
+  const createCustomerOrder = (orderData) => {
     const newOrder = {
-      ...order,
       id: Date.now(),
-      amount: Number(order.amount) || 0,
-      quantity: Number(order.quantity) || 1,
-      date: order.date || new Date().toISOString().split("T")[0],
+      customerName: orderData.customerName || "Website Customer",
+      phone: orderData.phone || "Not specified",
+      address: orderData.address || "Share in chat",
+      items: orderData.items || [],
+      subtotal: orderData.subtotal || 0,
+      totalAmount: orderData.totalAmount || orderData.subtotal || 0,
+      status: "Pending", // Default new order status
+      date: new Date().toISOString().split("T")[0],
+      freeGift: orderData.freeGift || false,
     };
-    setSalesOrders((prev) => [newOrder, ...prev]);
+
+    setCustomerOrders((prev) => [newOrder, ...prev]);
+    return newOrder;
   };
 
-  const deleteSalesOrder = (id) => {
-    setSalesOrders((prev) => prev.filter((o) => o.id !== id));
+  const updateOrderStatus = (orderId, newStatus) => {
+    setCustomerOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    );
+  };
+
+  const deleteCustomerOrder = (orderId) => {
+    setCustomerOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
   const addExpense = (exp) => {
@@ -175,9 +214,10 @@ export function ProductProvider({ children }) {
         resetDefaultProducts,
         adminPin,
         updateAdminPin,
-        salesOrders,
-        addSalesOrder,
-        deleteSalesOrder,
+        customerOrders,
+        createCustomerOrder,
+        updateOrderStatus,
+        deleteCustomerOrder,
         expenses,
         addExpense,
         deleteExpense,

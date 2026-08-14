@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useProducts } from "../context/ProductContext";
 import Footer from "../components/Footer";
-import { Trash, Check, Sparkles, ArrowRight } from "../components/Icons";
+import { Trash, Check, Sparkles, ArrowRight, ShoppingBag } from "../components/Icons";
 
 function Admin() {
   const {
@@ -12,9 +12,9 @@ function Admin() {
     resetDefaultProducts,
     adminPin,
     updateAdminPin,
-    salesOrders,
-    addSalesOrder,
-    deleteSalesOrder,
+    customerOrders,
+    updateOrderStatus,
+    deleteCustomerOrder,
     expenses,
     addExpense,
     deleteExpense,
@@ -24,10 +24,10 @@ function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinError, setPinError] = useState("");
 
-  const [activeTab, setActiveTab] = useState("accounting"); // 'accounting' | 'add' | 'manage' | 'pin'
+  const [activeSection, setActiveSection] = useState("dashboard"); // 'dashboard' | 'orders' | 'accounting' | 'products' | 'pin'
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Product Add Form State
+  // Product Form State
   const [name, setName] = useState("");
   const [numericPrice, setNumericPrice] = useState("");
   const [size, setSize] = useState("");
@@ -40,21 +40,13 @@ function Admin() {
   const [imagePreview, setImagePreview] = useState(null);
   const [bestSeller, setBestSeller] = useState(false);
 
-  // New Sale Order Form State
-  const [saleCustomer, setSaleCustomer] = useState("");
-  const [saleProdName, setSaleProdName] = useState(products[0]?.name || "Rose Water");
-  const [saleQty, setSaleQty] = useState(1);
-  const [saleAmount, setSaleAmount] = useState("");
-  const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
-  const [saleNotes, setSaleNotes] = useState("WhatsApp Order");
-
   // Expense Form State
   const [expTitle, setExpTitle] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expCategory, setExpCategory] = useState("Raw Materials");
   const [expDate, setExpDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // PIN change state
+  // PIN state
   const [newPinInput, setNewPinInput] = useState("");
 
   const handleLogin = (e) => {
@@ -79,7 +71,7 @@ function Admin() {
     }
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddProductSubmit = (e) => {
     e.preventDefault();
     if (!name || !numericPrice || !size) {
       alert("Please fill in Product Name, Price, and Size.");
@@ -108,7 +100,6 @@ function Admin() {
     setSuccessMsg(`Successfully added "${newProd.name}" to live website catalog!`);
     setTimeout(() => setSuccessMsg(""), 4000);
 
-    // Reset Form
     setName("");
     setNumericPrice("");
     setSize("");
@@ -119,29 +110,6 @@ function Admin() {
     setImageUrl("");
     setImagePreview(null);
     setBestSeller(false);
-  };
-
-  const handleRecordSale = (e) => {
-    e.preventDefault();
-    if (!saleAmount) {
-      alert("Please enter the total sale amount.");
-      return;
-    }
-
-    addSalesOrder({
-      customerName: saleCustomer || "Direct Customer",
-      productName: saleProdName,
-      quantity: Number(saleQty),
-      amount: Number(saleAmount),
-      date: saleDate,
-      notes: saleNotes,
-    });
-
-    setSuccessMsg(`Recorded sale of ₹${saleAmount} for ${saleProdName}!`);
-    setTimeout(() => setSuccessMsg(""), 4000);
-
-    setSaleCustomer("");
-    setSaleAmount("");
   };
 
   const handleRecordExpense = (e) => {
@@ -176,27 +144,30 @@ function Admin() {
     alert("Owner PIN code successfully updated!");
   };
 
-  // Financial Calculations
-  const totalRevenue = salesOrders.reduce((sum, o) => sum + o.amount, 0);
+  // Financial Calculations (Shipped & Delivered orders count towards Revenue)
+  const shippedOrders = customerOrders.filter((o) => o.status === "Shipped" || o.status === "Delivered");
+  const totalRevenue = shippedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpenseAmount;
+  const pendingOrdersCount = customerOrders.filter((o) => o.status === "Pending").length;
 
   // Export Financial CSV for March-Ending Tax & CA Filing
   const exportMarchEndingCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "AKSHAYA GLOW NATURALS - FINANCIAL & SALES LEDGER REPORT\n";
+    csvContent += "AKSHAYA GLOW NATURALS - MARCH-ENDING FINANCIAL LEDGER REPORT\n";
     csvContent += `Generated On: ${new Date().toLocaleDateString()}\n\n`;
 
-    csvContent += "SUMMARY METRICS\n";
-    csvContent += `Total Sales Revenue,₹${totalRevenue}\n`;
-    csvContent += `Total Expenses,₹${totalExpenseAmount}\n`;
+    csvContent += "FINANCIAL SUMMARY\n";
+    csvContent += `Total Shipped Sales Revenue,₹${totalRevenue}\n`;
+    csvContent += `Total Business Expenses,₹${totalExpenseAmount}\n`;
     csvContent += `Net Profit,₹${netProfit}\n`;
-    csvContent += `Total Orders Recorded,${salesOrders.length}\n\n`;
+    csvContent += `Total Orders Logged,${customerOrders.length}\n\n`;
 
-    csvContent += "SALES & ORDERS TRANSACTIONS\n";
-    csvContent += "ID,Date,Customer Name,Product Sold,Quantity,Amount (₹),Notes\n";
-    salesOrders.forEach((o) => {
-      csvContent += `${o.id},${o.date},"${o.customerName}","${o.productName}",${o.quantity},${o.amount},"${o.notes}"\n`;
+    csvContent += "CUSTOMER ORDERS LEDGER\n";
+    csvContent += "Order ID,Date,Customer Name,Phone,Address,Items Ordered,Total Amount (₹),Status\n";
+    customerOrders.forEach((o) => {
+      const itemsStr = o.items.map((i) => `${i.name} (${i.size}) x${i.quantity}`).join(" + ");
+      csvContent += `${o.id},${o.date},"${o.customerName}","${o.phone}","${o.address.replace(/"/g, '""')}","${itemsStr}",${o.totalAmount},${o.status}\n`;
     });
 
     csvContent += "\nBUSINESS EXPENSES LOG\n";
@@ -208,7 +179,7 @@ function Admin() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `AGNI_Financial_Report_March_Ending_${new Date().getFullYear()}.csv`);
+    link.setAttribute("download", `AGNI_March_Ending_Report_${new Date().getFullYear()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -220,7 +191,7 @@ function Admin() {
         <div className="admin-login-card">
           <div className="admin-badge">🔐 Owner Access Portal</div>
           <h2>Akshaya Glow Naturals</h2>
-          <p>Please enter your Owner PIN code to access products &amp; sales analytics.</p>
+          <p>Please enter your Owner PIN code to unlock your business dashboard.</p>
 
           <form onSubmit={handleLogin} className="admin-pin-form">
             <input
@@ -243,511 +214,656 @@ function Admin() {
 
   return (
     <>
-      <div className="admin-dashboard-page container">
-        <div className="admin-header">
-          <div>
-            <span className="eyebrow"><Sparkles /> Live Store &amp; Sales Management</span>
-            <h1>Owner Analytics &amp; Control Dashboard</h1>
+      <div className="admin-layout">
+        {/* Left Dashboard Sidebar */}
+        <aside className="admin-sidebar">
+          <div className="sidebar-header">
+            <span className="sidebar-brand">🌿 AGNI Owner Studio</span>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={() => setIsAuthenticated(false)}>
-            🔒 Lock Portal
-          </button>
-        </div>
 
-        {/* Accounting Overview Cards */}
-        <div className="admin-stats-grid">
-          <div className="stat-card">
-            <span className="stat-num" style={{ color: "#2E7D32" }}>₹{totalRevenue}</span>
-            <span className="stat-label">Total Gross Revenue</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-num" style={{ color: "#D32F2F" }}>₹{totalExpenseAmount}</span>
-            <span className="stat-label">Total Expenses</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-num" style={{ color: netProfit >= 0 ? "#1976D2" : "#D32F2F" }}>
-              ₹{netProfit}
-            </span>
-            <span className="stat-label">Net Profit</span>
-          </div>
-        </div>
+          <nav className="sidebar-nav">
+            <button
+              className={`sidebar-link ${activeSection === "dashboard" ? "active" : ""}`}
+              onClick={() => setActiveSection("dashboard")}
+            >
+              📊 Overview &amp; Stats
+            </button>
+            <button
+              className={`sidebar-link ${activeSection === "orders" ? "active" : ""}`}
+              onClick={() => setActiveSection("orders")}
+            >
+              📦 Incoming Orders
+              {pendingOrdersCount > 0 && (
+                <span className="sidebar-badge">{pendingOrdersCount}</span>
+              )}
+            </button>
+            <button
+              className={`sidebar-link ${activeSection === "accounting" ? "active" : ""}`}
+              onClick={() => setActiveSection("accounting")}
+            >
+              💼 March-Ending Ledger
+            </button>
+            <button
+              className={`sidebar-link ${activeSection === "products" ? "active" : ""}`}
+              onClick={() => setActiveSection("products")}
+            >
+              🛍️ Products &amp; Combos ({products.length})
+            </button>
+            <button
+              className={`sidebar-link ${activeSection === "pin" ? "active" : ""}`}
+              onClick={() => setActiveSection("pin")}
+            >
+              🔑 Security PIN
+            </button>
+          </nav>
 
-        {/* Success Alert */}
-        {successMsg && (
-          <div className="admin-success-alert">
-            <Check /> {successMsg}
+          <div className="sidebar-footer">
+            <button className="btn btn-outline btn-block btn-sm" onClick={() => setIsAuthenticated(false)}>
+              🔒 Lock Dashboard
+            </button>
           </div>
-        )}
+        </aside>
 
-        {/* Navigation Tabs */}
-        <div className="admin-tabs">
-          <button
-            className={`admin-tab-btn ${activeTab === "accounting" ? "active" : ""}`}
-            onClick={() => setActiveTab("accounting")}
-          >
-            📊 Accounting &amp; March-Ending Ledger
-          </button>
-          <button
-            className={`admin-tab-btn ${activeTab === "add" ? "active" : ""}`}
-            onClick={() => setActiveTab("add")}
-          >
-            ➕ Add Product / Combo
-          </button>
-          <button
-            className={`admin-tab-btn ${activeTab === "manage" ? "active" : ""}`}
-            onClick={() => setActiveTab("manage")}
-          >
-            📦 Catalog Manager ({products.length})
-          </button>
-          <button
-            className={`admin-tab-btn ${activeTab === "pin" ? "active" : ""}`}
-            onClick={() => setActiveTab("pin")}
-          >
-            🔑 Security PIN
-          </button>
-        </div>
-
-        {/* TAB 1: Accounting & March-Ending Ledger */}
-        {activeTab === "accounting" && (
-          <div className="admin-panel-box">
-            <div className="panel-title-row">
-              <h2>Sales Analytics &amp; March-Ending Financial Ledger</h2>
-              <button className="btn btn-primary btn-sm" onClick={exportMarchEndingCSV}>
-                📥 Export March-Ending Report (CSV)
-              </button>
+        {/* Main Dashboard Content Area */}
+        <main className="admin-main-content">
+          {/* Top Bar Alert */}
+          {successMsg && (
+            <div className="admin-success-alert">
+              <Check /> {successMsg}
             </div>
+          )}
 
-            <div className="accounting-grid-2">
-              {/* Form 1: Record Sale */}
-              <div className="ledger-card-form">
-                <h3>🛒 Record New Sale / WhatsApp Order</h3>
-                <form onSubmit={handleRecordSale}>
-                  <div className="form-group">
-                    <label>Customer Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ananya R."
-                      value={saleCustomer}
-                      onChange={(e) => setSaleCustomer(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Product Sold</label>
-                    <select
-                      value={saleProdName}
-                      onChange={(e) => setSaleProdName(e.target.value)}
-                    >
-                      {products.map((p) => (
-                        <option key={p.id} value={p.name}>
-                          {p.name} ({p.size}) - {p.price}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-grid-2">
-                    <div className="form-group">
-                      <label>Qty</label>
-                      <input
-                        type="number"
-                        value={saleQty}
-                        onChange={(e) => setSaleQty(e.target.value)}
-                        min="1"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Total Sale ₹ *</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 120"
-                        value={saleAmount}
-                        onChange={(e) => setSaleAmount(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>Sale Date</label>
-                    <input
-                      type="date"
-                      value={saleDate}
-                      onChange={(e) => setSaleDate(e.target.value)}
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary btn-block">
-                    Record Sales Order
-                  </button>
-                </form>
-              </div>
-
-              {/* Form 2: Record Expense */}
-              <div className="ledger-card-form">
-                <h3>💸 Record Business Expense</h3>
-                <form onSubmit={handleRecordExpense}>
-                  <div className="form-group">
-                    <label>Expense Description *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Glass Jars, Rose Petals, Courier"
-                      value={expTitle}
-                      onChange={(e) => setExpTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Expense Category</label>
-                    <select
-                      value={expCategory}
-                      onChange={(e) => setExpCategory(e.target.value)}
-                    >
-                      <option value="Raw Materials">Raw Materials</option>
-                      <option value="Packaging">Packaging</option>
-                      <option value="Shipping/Courier">Shipping / Courier</option>
-                      <option value="Marketing/Hosting">Marketing &amp; Hosting</option>
-                    </select>
-                  </div>
-                  <div className="form-grid-2">
-                    <div className="form-group">
-                      <label>Amount ₹ *</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 350"
-                        value={expAmount}
-                        onChange={(e) => setExpAmount(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Expense Date</label>
-                      <input
-                        type="date"
-                        value={expDate}
-                        onChange={(e) => setExpDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" className="btn btn-outline btn-block">
-                    Record Expense
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Sales Orders Log Table */}
-            <div className="ledger-table-section">
-              <h3>Recent Sales Orders ({salesOrders.length})</h3>
-              <div className="table-responsive">
-                <table className="admin-ledger-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Customer</th>
-                      <th>Product</th>
-                      <th>Qty</th>
-                      <th>Amount</th>
-                      <th>Notes</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salesOrders.map((o) => (
-                      <tr key={o.id}>
-                        <td>{o.date}</td>
-                        <td>{o.customerName}</td>
-                        <td>{o.productName}</td>
-                        <td>{o.quantity}</td>
-                        <td className="amount-green">₹{o.amount}</td>
-                        <td>{o.notes}</td>
-                        <td>
-                          <button
-                            className="admin-delete-btn"
-                            onClick={() => deleteSalesOrder(o.id)}
-                            title="Delete record"
-                          >
-                            <Trash />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Expenses Log Table */}
-            <div className="ledger-table-section">
-              <h3>Business Expenses ({expenses.length})</h3>
-              <div className="table-responsive">
-                <table className="admin-ledger-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Category</th>
-                      <th>Amount</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {expenses.map((e) => (
-                      <tr key={e.id}>
-                        <td>{e.date}</td>
-                        <td>{e.title}</td>
-                        <td>{e.category}</td>
-                        <td className="amount-red">₹{e.amount}</td>
-                        <td>
-                          <button
-                            className="admin-delete-btn"
-                            onClick={() => deleteExpense(e.id)}
-                            title="Delete record"
-                          >
-                            <Trash />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: Add New Product */}
-        {activeTab === "add" && (
-          <div className="admin-panel-box">
-            <h2>Add New Item or Special Combo</h2>
-            <form onSubmit={handleAddSubmit} className="admin-add-form">
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label htmlFor="p-name">Product Name *</label>
-                  <input
-                    id="p-name"
-                    type="text"
-                    placeholder="e.g. Saffron Face Oil, Kumkumadi Pack"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="p-category">Category *</label>
-                  <select
-                    id="p-category"
-                    value={categoryLabel}
-                    onChange={(e) => setCategoryLabel(e.target.value)}
-                  >
-                    <option value="Face Care">Face Care</option>
-                    <option value="Herbal Powders">Herbal Powders</option>
-                    <option value="Lip Care">Lip Care</option>
-                    <option value="Value Combo">Value Combo</option>
-                  </select>
+          {/* SECTION 1: DASHBOARD OVERVIEW */}
+          {activeSection === "dashboard" && (
+            <div className="admin-section-block">
+              <div className="admin-section-header">
+                <div>
+                  <span className="eyebrow"><Sparkles /> Business Performance</span>
+                  <h1>Dashboard Overview</h1>
                 </div>
               </div>
 
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label htmlFor="p-price">Price in ₹ *</label>
-                  <input
-                    id="p-price"
-                    type="number"
-                    placeholder="e.g. 70"
-                    value={numericPrice}
-                    onChange={(e) => setNumericPrice(e.target.value)}
-                    required
-                  />
+              {/* Metric Cards Grid */}
+              <div className="admin-stats-grid">
+                <div className="stat-card">
+                  <span className="stat-num" style={{ color: "#2E7D32" }}>₹{totalRevenue}</span>
+                  <span className="stat-label">Total Shipped Revenue</span>
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="p-size">Size / Quantity *</label>
-                  <input
-                    id="p-size"
-                    type="text"
-                    placeholder="e.g. 50g, 100ml, 1 Bottle"
-                    value={size}
-                    onChange={(e) => setSize(e.target.value)}
-                    required
-                  />
+                <div className="stat-card">
+                  <span className="stat-num" style={{ color: pendingOrdersCount > 0 ? "#E65100" : "#2E7D32" }}>
+                    {pendingOrdersCount}
+                  </span>
+                  <span className="stat-label">Pending Orders to Ship</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-num" style={{ color: "#D32F2F" }}>₹{totalExpenseAmount}</span>
+                  <span className="stat-label">Business Expenses</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-num" style={{ color: netProfit >= 0 ? "#1976D2" : "#D32F2F" }}>
+                    ₹{netProfit}
+                  </span>
+                  <span className="stat-label">Net Profit</span>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="p-tagline">Short Tagline</label>
-                <input
-                  id="p-tagline"
-                  type="text"
-                  placeholder="e.g. Deep hydration & natural glow mist"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                />
+              {/* Quick Actions */}
+              <div className="quick-actions-row">
+                <button className="btn btn-primary" onClick={() => setActiveSection("orders")}>
+                  📦 View Incoming Orders ({customerOrders.length})
+                </button>
+                <button className="btn btn-outline" onClick={() => setActiveSection("products")}>
+                  ➕ Add New Product
+                </button>
+                <button className="btn btn-outline" onClick={exportMarchEndingCSV}>
+                  📥 Export March-Ending Financials (CSV)
+                </button>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="p-desc">Product Description</label>
-                <textarea
-                  id="p-desc"
-                  rows="3"
-                  placeholder="Describe ingredients, scent, and skin feeling..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                ></textarea>
-              </div>
-
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label htmlFor="p-ingredients">Ingredients (Comma separated)</label>
-                  <input
-                    id="p-ingredients"
-                    type="text"
-                    placeholder="e.g. Fresh Rose, Saffron, Amla"
-                    value={ingredients}
-                    onChange={(e) => setIngredients(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="p-how">How to Use</label>
-                  <input
-                    id="p-how"
-                    type="text"
-                    placeholder="e.g. Apply morning and night"
-                    value={howToUse}
-                    onChange={(e) => setHowToUse(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Photo Upload Options */}
-              <div className="form-group image-upload-box">
-                <label>Product Photo (Upload Image File OR Paste Image Link)</label>
-                <div className="upload-options-row">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    className="file-input-btn"
-                  />
-                  <span>or</span>
-                  <input
-                    type="url"
-                    placeholder="Paste Image URL (https://...)"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="url-input"
-                  />
-                </div>
-                {(imagePreview || imageUrl) && (
-                  <div className="photo-preview-bar">
-                    <span>Preview:</span>
-                    <img src={imagePreview || imageUrl} alt="Preview" />
+              {/* Recent Orders Preview */}
+              <div className="admin-panel-box" style={{ marginTop: "30px" }}>
+                <h3>Recent Incoming Orders</h3>
+                {customerOrders.length === 0 ? (
+                  <p className="empty-text">No customer orders recorded yet.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="admin-ledger-table">
+                      <thead>
+                        <tr>
+                          <th>Order ID</th>
+                          <th>Date</th>
+                          <th>Customer</th>
+                          <th>Items</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customerOrders.slice(0, 5).map((o) => (
+                          <tr key={o.id}>
+                            <td>#{o.id}</td>
+                            <td>{o.date}</td>
+                            <td>
+                              <strong>{o.customerName}</strong>
+                              <br />
+                              <span className="sub-text">{o.phone}</span>
+                            </td>
+                            <td>
+                              {o.items.map((i, idx) => (
+                                <span key={idx} className="order-item-chip">
+                                  {i.name} (x{i.quantity})
+                                </span>
+                              ))}
+                            </td>
+                            <td className="amount-green">₹{o.totalAmount}</td>
+                            <td>
+                              <span className={`status-badge status-${o.status.toLowerCase()}`}>
+                                {o.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              <div className="form-checkbox-row">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={bestSeller}
-                    onChange={(e) => setBestSeller(e.target.checked)}
-                  />
-                  Mark as "Best Seller" Badge
-                </label>
+          {/* SECTION 2: INCOMING CUSTOMER ORDERS */}
+          {activeSection === "orders" && (
+            <div className="admin-section-block">
+              <div className="admin-section-header">
+                <div>
+                  <span className="eyebrow"><ShoppingBag /> Automatic WhatsApp Orders</span>
+                  <h1>Customer Orders &amp; Shipping Manager</h1>
+                </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg">
-                Publish Product to Live Website <ArrowRight />
-              </button>
-            </form>
-          </div>
-        )}
+              <div className="admin-panel-box">
+                <p className="helper-text">
+                  Orders placed by customers on your website automatically show up here. Mark an order as <strong>"Shipped"</strong> or <strong>"Delivered"</strong> to automatically count its revenue into your Accounting Ledger!
+                </p>
 
-        {/* TAB 3: Manage Existing Catalog */}
-        {activeTab === "manage" && (
-          <div className="admin-panel-box">
-            <div className="panel-title-row">
-              <h2>Existing Catalog ({products.length} items)</h2>
-              <button
-                className="btn btn-outline btn-sm danger-btn"
-                onClick={() => {
-                  if (confirm("Reset store products back to original default catalog?")) {
-                    resetDefaultProducts();
-                  }
-                }}
-              >
-                Reset to Default Items
-              </button>
-            </div>
-
-            <div className="admin-products-table">
-              {products.map((prod) => (
-                <div key={prod.id} className="admin-product-row">
-                  <img
-                    src={prod.image || "https://via.placeholder.com/60"}
-                    alt={prod.name}
-                    className="admin-prod-thumb"
-                  />
-                  <div className="admin-prod-info">
-                    <h4>{prod.name}</h4>
-                    <span className="admin-prod-meta">{prod.categoryLabel} • {prod.size}</span>
+                {customerOrders.length === 0 ? (
+                  <div className="empty-state-box">
+                    <p>No orders yet. When customers order on WhatsApp, their orders will appear here automatically.</p>
                   </div>
-                  <div className="admin-prod-price">
-                    <span>₹</span>
+                ) : (
+                  <div className="orders-cards-list">
+                    {customerOrders.map((o) => (
+                      <div key={o.id} className="order-details-card">
+                        <div className="order-card-head">
+                          <div>
+                            <h3>Order #{o.id}</h3>
+                            <span className="order-date">Date: {o.date}</span>
+                          </div>
+                          <div className="order-status-selector">
+                            <label>Status:</label>
+                            <select
+                              value={o.status}
+                              onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                              className={`select-status status-${o.status.toLowerCase()}`}
+                            >
+                              <option value="Pending">🟡 Pending</option>
+                              <option value="Shipped">🚚 Shipped (Counts as Sale)</option>
+                              <option value="Delivered">✅ Delivered</option>
+                              <option value="Cancelled">❌ Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="order-card-body">
+                          <div className="order-customer-info">
+                            <p><strong>Customer:</strong> {o.customerName}</p>
+                            <p><strong>WhatsApp:</strong> <a href={`https://wa.me/${o.phone}`} target="_blank" rel="noreferrer">{o.phone}</a></p>
+                            <p><strong>Address:</strong> {o.address}</p>
+                          </div>
+
+                          <div className="order-items-summary">
+                            <h4>Items Ordered:</h4>
+                            <ul>
+                              {o.items.map((item, idx) => (
+                                <li key={idx}>
+                                  🌿 {item.name} ({item.size}) - Qty: {item.quantity} x ₹{item.price}
+                                </li>
+                              ))}
+                              {o.freeGift && <li className="free-gift-text">🎁 Free 25g Rice Powder Included</li>}
+                            </ul>
+                            <div className="order-total-price">
+                              Total Amount: <strong>₹{o.totalAmount}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="order-card-footer">
+                          <button
+                            className="admin-delete-btn"
+                            onClick={() => {
+                              if (confirm(`Delete order #${o.id}?`)) {
+                                deleteCustomerOrder(o.id);
+                              }
+                            }}
+                          >
+                            <Trash /> Delete Order Log
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 3: ACCOUNTING & MARCH-ENDING LEDGER */}
+          {activeSection === "accounting" && (
+            <div className="admin-section-block">
+              <div className="admin-section-header">
+                <div>
+                  <span className="eyebrow"><Sparkles /> CA &amp; Tax Ready</span>
+                  <h1>Accounting &amp; March-Ending Ledger</h1>
+                </div>
+                <button className="btn btn-primary" onClick={exportMarchEndingCSV}>
+                  📥 Export March-Ending CSV Report
+                </button>
+              </div>
+
+              <div className="admin-panel-box">
+                <div className="accounting-summary-banner">
+                  <div className="acc-sum-item">
+                    <span>Shipped Sales Revenue</span>
+                    <strong className="amount-green">₹{totalRevenue}</strong>
+                  </div>
+                  <div className="acc-sum-item">
+                    <span>Business Expenses</span>
+                    <strong className="amount-red">₹{totalExpenseAmount}</strong>
+                  </div>
+                  <div className="acc-sum-item">
+                    <span>Net Business Profit</span>
+                    <strong style={{ color: netProfit >= 0 ? "#1976D2" : "#D32F2F" }}>
+                      ₹{netProfit}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Record Expense Form */}
+                <div className="ledger-card-form" style={{ marginTop: "24px" }}>
+                  <h3>💸 Record Business Expense</h3>
+                  <form onSubmit={handleRecordExpense}>
+                    <div className="form-grid-2">
+                      <div className="form-group">
+                        <label>Expense Description *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Glass Jars, Rose Petals, Courier"
+                          value={expTitle}
+                          onChange={(e) => setExpTitle(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Expense Category</label>
+                        <select
+                          value={expCategory}
+                          onChange={(e) => setExpCategory(e.target.value)}
+                        >
+                          <option value="Raw Materials">Raw Materials</option>
+                          <option value="Packaging">Packaging</option>
+                          <option value="Shipping/Courier">Shipping / Courier</option>
+                          <option value="Marketing/Hosting">Marketing &amp; Hosting</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-grid-2">
+                      <div className="form-group">
+                        <label>Amount ₹ *</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 350"
+                          value={expAmount}
+                          onChange={(e) => setExpAmount(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Date</label>
+                        <input
+                          type="date"
+                          value={expDate}
+                          onChange={(e) => setExpDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" className="btn btn-outline">
+                      Record Expense Entry
+                    </button>
+                  </form>
+                </div>
+
+                {/* Shipped Orders Sales Revenue Table */}
+                <div className="ledger-table-section">
+                  <h3>Automatically Logged Shipped Sales ({shippedOrders.length})</h3>
+                  <div className="table-responsive">
+                    <table className="admin-ledger-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Order ID</th>
+                          <th>Customer Name</th>
+                          <th>Total Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shippedOrders.map((o) => (
+                          <tr key={o.id}>
+                            <td>{o.date}</td>
+                            <td>#{o.id}</td>
+                            <td>{o.customerName}</td>
+                            <td className="amount-green">₹{o.totalAmount}</td>
+                            <td><span className="status-badge status-shipped">{o.status}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Expenses Log Table */}
+                <div className="ledger-table-section">
+                  <h3>Business Expenses Log ({expenses.length})</h3>
+                  <div className="table-responsive">
+                    <table className="admin-ledger-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Description</th>
+                          <th>Category</th>
+                          <th>Amount</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expenses.map((e) => (
+                          <tr key={e.id}>
+                            <td>{e.date}</td>
+                            <td>{e.title}</td>
+                            <td>{e.category}</td>
+                            <td className="amount-red">₹{e.amount}</td>
+                            <td>
+                              <button
+                                className="admin-delete-btn"
+                                onClick={() => deleteExpense(e.id)}
+                              >
+                                <Trash />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 4: PRODUCTS & COMBOS CATALOG MANAGER */}
+          {activeSection === "products" && (
+            <div className="admin-section-block">
+              <div className="admin-section-header">
+                <div>
+                  <span className="eyebrow"><Sparkles /> Product Catalog</span>
+                  <h1>Products &amp; Combos Manager</h1>
+                </div>
+              </div>
+
+              {/* Form: Add New Product */}
+              <div className="admin-panel-box" style={{ marginBottom: "30px" }}>
+                <h2>Add New Item or Special Combo</h2>
+                <form onSubmit={handleAddProductSubmit} className="admin-add-form">
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label htmlFor="p-name">Product Name *</label>
+                      <input
+                        id="p-name"
+                        type="text"
+                        placeholder="e.g. Saffron Face Oil, Kumkumadi Pack"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="p-category">Category *</label>
+                      <select
+                        id="p-category"
+                        value={categoryLabel}
+                        onChange={(e) => setCategoryLabel(e.target.value)}
+                      >
+                        <option value="Face Care">Face Care</option>
+                        <option value="Herbal Powders">Herbal Powders</option>
+                        <option value="Lip Care">Lip Care</option>
+                        <option value="Value Combo">Value Combo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label htmlFor="p-price">Price in ₹ *</label>
+                      <input
+                        id="p-price"
+                        type="number"
+                        placeholder="e.g. 70"
+                        value={numericPrice}
+                        onChange={(e) => setNumericPrice(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="p-size">Size / Quantity *</label>
+                      <input
+                        id="p-size"
+                        type="text"
+                        placeholder="e.g. 50g, 100ml, 1 Bottle"
+                        value={size}
+                        onChange={(e) => setSize(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="p-tagline">Short Tagline</label>
                     <input
-                      type="number"
-                      value={prod.numericPrice}
-                      onChange={(e) =>
-                        updateProduct(prod.id, { numericPrice: Number(e.target.value) })
-                      }
+                      id="p-tagline"
+                      type="text"
+                      placeholder="e.g. Deep hydration &amp; natural glow mist"
+                      value={tagline}
+                      onChange={(e) => setTagline(e.target.value)}
                     />
                   </div>
-                  <button
-                    className={`btn-bestseller-toggle ${prod.bestSeller ? "active" : ""}`}
-                    onClick={() => updateProduct(prod.id, { bestSeller: !prod.bestSeller })}
-                  >
-                    {prod.bestSeller ? "★ Best Seller" : "Set Bestseller"}
+
+                  <div className="form-group">
+                    <label htmlFor="p-desc">Product Description</label>
+                    <textarea
+                      id="p-desc"
+                      rows="3"
+                      placeholder="Describe ingredients, scent, and skin feeling..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    ></textarea>
+                  </div>
+
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label htmlFor="p-ingredients">Ingredients (Comma separated)</label>
+                      <input
+                        id="p-ingredients"
+                        type="text"
+                        placeholder="e.g. Fresh Rose, Saffron, Amla"
+                        value={ingredients}
+                        onChange={(e) => setIngredients(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="p-how">How to Use</label>
+                      <input
+                        id="p-how"
+                        type="text"
+                        placeholder="e.g. Apply morning and night"
+                        value={howToUse}
+                        onChange={(e) => setHowToUse(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Photo Upload Options */}
+                  <div className="form-group image-upload-box">
+                    <label>Product Photo (Upload Image File OR Paste Image Link)</label>
+                    <div className="upload-options-row">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="file-input-btn"
+                      />
+                      <span>or</span>
+                      <input
+                        type="url"
+                        placeholder="Paste Image URL (https://...)"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="url-input"
+                      />
+                    </div>
+                    {(imagePreview || imageUrl) && (
+                      <div className="photo-preview-bar">
+                        <span>Preview:</span>
+                        <img src={imagePreview || imageUrl} alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-checkbox-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={bestSeller}
+                        onChange={(e) => setBestSeller(e.target.checked)}
+                      />
+                      Mark as "Best Seller" Badge
+                    </label>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary btn-lg">
+                    Publish Product to Live Website <ArrowRight />
                   </button>
+                </form>
+              </div>
+
+              {/* Table: Existing Products List */}
+              <div className="admin-panel-box">
+                <div className="panel-title-row">
+                  <h2>Existing Catalog ({products.length} items)</h2>
                   <button
-                    className="admin-delete-btn"
+                    className="btn btn-outline btn-sm danger-btn"
                     onClick={() => {
-                      if (confirm(`Delete "${prod.name}" from store catalog?`)) {
-                        deleteProduct(prod.id);
+                      if (confirm("Reset store products back to original default catalog?")) {
+                        resetDefaultProducts();
                       }
                     }}
-                    title="Delete item"
                   >
-                    <Trash />
+                    Reset to Default Items
                   </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* TAB 4: Security PIN */}
-        {activeTab === "pin" && (
-          <div className="admin-panel-box">
-            <h2>Change Owner Security PIN</h2>
-            <p>Update the PIN code used to access this Owner Portal.</p>
-            <form onSubmit={handlePinChange} className="admin-pin-change-form">
-              <div className="form-group">
-                <label htmlFor="new-pin">New 4-Digit Owner PIN</label>
-                <input
-                  id="new-pin"
-                  type="password"
-                  placeholder="e.g. 5678"
-                  value={newPinInput}
-                  onChange={(e) => setNewPinInput(e.target.value)}
-                  maxLength={8}
-                  required
-                />
+                <div className="admin-products-table">
+                  {products.map((prod) => (
+                    <div key={prod.id} className="admin-product-row">
+                      <img
+                        src={prod.image || "https://via.placeholder.com/60"}
+                        alt={prod.name}
+                        className="admin-prod-thumb"
+                      />
+                      <div className="admin-prod-info">
+                        <h4>{prod.name}</h4>
+                        <span className="admin-prod-meta">{prod.categoryLabel} • {prod.size}</span>
+                      </div>
+                      <div className="admin-prod-price">
+                        <span>₹</span>
+                        <input
+                          type="number"
+                          value={prod.numericPrice}
+                          onChange={(e) =>
+                            updateProduct(prod.id, { numericPrice: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                      <button
+                        className={`btn-bestseller-toggle ${prod.bestSeller ? "active" : ""}`}
+                        onClick={() => updateProduct(prod.id, { bestSeller: !prod.bestSeller })}
+                      >
+                        {prod.bestSeller ? "★ Best Seller" : "Set Bestseller"}
+                      </button>
+                      <button
+                        className="admin-delete-btn"
+                        onClick={() => {
+                          if (confirm(`Delete "${prod.name}" from store catalog?`)) {
+                            deleteProduct(prod.id);
+                          }
+                        }}
+                        title="Delete item"
+                      >
+                        <Trash />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <button type="submit" className="btn btn-primary">
-                Update Owner PIN
-              </button>
-            </form>
-          </div>
-        )}
+            </div>
+          )}
+
+          {/* SECTION 5: SECURITY PIN */}
+          {activeSection === "pin" && (
+            <div className="admin-section-block">
+              <div className="admin-section-header">
+                <div>
+                  <span className="eyebrow"><Sparkles /> Security</span>
+                  <h1>Owner Security PIN</h1>
+                </div>
+              </div>
+
+              <div className="admin-panel-box">
+                <h2>Change Owner Security PIN</h2>
+                <p>Update the PIN code used to access this Owner Portal.</p>
+                <form onSubmit={handlePinChange} className="admin-pin-change-form">
+                  <div className="form-group">
+                    <label htmlFor="new-pin">New 4-Digit Owner PIN</label>
+                    <input
+                      id="new-pin"
+                      type="password"
+                      placeholder="e.g. 5678"
+                      value={newPinInput}
+                      onChange={(e) => setNewPinInput(e.target.value)}
+                      maxLength={8}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary">
+                    Update Owner PIN
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
       <Footer />

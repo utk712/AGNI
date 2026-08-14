@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
+import { useProducts } from "../context/ProductContext";
 import { business, whatsappLink } from "../data/business";
 import { WhatsApp, Sparkles, Trash, X, ArrowRight, ShoppingBag } from "./Icons";
 
@@ -18,6 +19,8 @@ function CartDrawer() {
     clearCart,
   } = useCart();
 
+  const { createCustomerOrder } = useProducts();
+
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -28,6 +31,26 @@ function CartDrawer() {
   const handleWhatsAppCheckout = (e) => {
     e.preventDefault();
     if (cart.length === 0) return;
+
+    // Automatically record order in Owner Accounting System
+    const orderItems = cart.map((item) => ({
+      name: item.product.name,
+      size: item.product.size,
+      quantity: item.quantity,
+      price: item.product.numericPrice,
+    }));
+
+    const finalTotal = subtotal >= 150 ? subtotal : subtotal + 40;
+
+    createCustomerOrder({
+      customerName: customerName || "Customer",
+      phone: customerPhone || "Not specified",
+      address: deliveryAddress || "Share in chat",
+      items: orderItems,
+      subtotal: subtotal,
+      totalAmount: finalTotal,
+      freeGift: freeGiftUnlocked,
+    });
 
     let itemsListText = cart
       .map(
@@ -54,12 +77,15 @@ ${itemsListText}
 ---
 💵 *Subtotal:* ₹${subtotal}
 🚚 *Delivery Fee:* ${subtotal >= 150 ? "FREE 🎉" : "Standard ₹40"}
-💰 *TOTAL AMOUNT:* ₹${subtotal >= 150 ? subtotal : subtotal + 40}
+💰 *TOTAL AMOUNT:* ₹${finalTotal}
 
-Please confirm availability and sharing payment details (UPI/PhonePe). Thank you!`;
+Please confirm availability and share payment details (UPI/PhonePe). Thank you!`;
 
     const url = whatsappLink(message);
     window.open(url, "_blank");
+
+    clearCart();
+    closeCart();
   };
 
   const giftProgressPercent = Math.min(100, Math.round((subtotal / freeGiftThreshold) * 100));
@@ -181,7 +207,7 @@ Please confirm availability and sharing payment details (UPI/PhonePe). Thank you
 
                 {/* Customer Checkout Form */}
                 <div className="checkout-form-section">
-                  <h3>Shipping & Contact Info</h3>
+                  <h3>Shipping &amp; Contact Info</h3>
                   <div className="form-group">
                     <label htmlFor="cust-name">Your Full Name</label>
                     <input
@@ -242,7 +268,7 @@ Please confirm availability and sharing payment details (UPI/PhonePe). Thank you
                 <WhatsApp /> Send Order on WhatsApp
               </button>
               <p className="cart-secure-note">
-                🔒 Orders sent directly to Akshaya Glow Naturals via WhatsApp for instant processing.
+                🔒 Orders sent directly to Akshaya Glow Naturals via WhatsApp &amp; automatically logged in Owner Accounting!
               </p>
             </div>
           )}
