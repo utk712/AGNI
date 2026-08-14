@@ -1747,6 +1747,108 @@ button {
   font-size: 16px;
 }
 
+/* --- Mobile Card Alignment & Table Fixes --- */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.product-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.product-card-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+/* Order Management Table Special Styling */
+.order-management-table {
+  font-size: 13.5px;
+}
+
+.order-management-table th,
+.order-management-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+}
+
+.address-col {
+  max-width: 220px;
+  word-break: break-word;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.phone-link {
+  color: var(--moss);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.table-items-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+
+  li {
+    font-size: 13px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+}
+
+.empty-state-box {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--ivory-soft);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+}
+
+@media (max-width: 600px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .product-card {
+    padding: 14px;
+  }
+
+  .products-intro {
+    padding: 30px 16px 20px;
+  }
+
+  .catalog-controls-container {
+    padding: 0 4%;
+  }
+
+  .admin-main-content {
+    padding: 20px 14px;
+  }
+}
+
+
 /* --- Sleek Owner Admin Sidebar Layout & Order Manager --- */
 .admin-layout {
   display: flex;

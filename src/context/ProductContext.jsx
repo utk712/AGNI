@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import initialProducts from "../data/products";
+import { fetchCloudStore, saveCloudStore } from "../services/cloudSync";
 
 const ProductContext = createContext();
 
@@ -27,7 +28,7 @@ export function ProductProvider({ children }) {
     }
   });
 
-  // Customer Orders (automatically created when customer orders via WhatsApp)
+  // Customer Orders
   const [customerOrders, setCustomerOrders] = useState(() => {
     try {
       const saved = localStorage.getItem("agni_customer_orders");
@@ -43,23 +44,9 @@ export function ProductProvider({ children }) {
           ],
           subtotal: 160,
           totalAmount: 160,
-          status: "Shipped", // Pending | Shipped | Delivered | Cancelled
+          status: "Shipped",
           date: "2026-08-12",
           freeGift: true
-        },
-        {
-          id: 102,
-          customerName: "Rahul Verma",
-          phone: "9123456789",
-          address: "B-12, Sector 5, Gurgaon - 122001",
-          items: [
-            { name: "ABC Powder", size: "100g", quantity: 1, price: 120 }
-          ],
-          subtotal: 120,
-          totalAmount: 160,
-          status: "Pending",
-          date: "2026-08-14",
-          freeGift: false
         }
       ];
     } catch {
@@ -80,29 +67,37 @@ export function ProductProvider({ children }) {
     }
   });
 
+  // Cross-Device Cloud Sync on Mount
   useEffect(() => {
-    try {
-      localStorage.setItem("agni_custom_products", JSON.stringify(products));
-    } catch (e) {
-      console.error(e);
+    async function syncWithCloud() {
+      const cloudData = await fetchCloudStore();
+      if (cloudData) {
+        if (cloudData.products && Array.isArray(cloudData.products)) {
+          setProducts(cloudData.products);
+          localStorage.setItem("agni_custom_products", JSON.stringify(cloudData.products));
+        }
+        if (cloudData.customerOrders && Array.isArray(cloudData.customerOrders)) {
+          setCustomerOrders(cloudData.customerOrders);
+          localStorage.setItem("agni_customer_orders", JSON.stringify(cloudData.customerOrders));
+        }
+        if (cloudData.expenses && Array.isArray(cloudData.expenses)) {
+          setExpenses(cloudData.expenses);
+          localStorage.setItem("agni_expenses", JSON.stringify(cloudData.expenses));
+        }
+      }
     }
-  }, [products]);
+    syncWithCloud();
+  }, []);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("agni_customer_orders", JSON.stringify(customerOrders));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [customerOrders]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("agni_expenses", JSON.stringify(expenses));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [expenses]);
+  // Save changes to localStorage and Cloud
+  const persistState = (newProds, newOrders, newExps) => {
+    const dataToSave = {
+      products: newProds || products,
+      customerOrders: newOrders || customerOrders,
+      expenses: newExps || expenses,
+    };
+    saveCloudStore(dataToSave);
+  };
 
   const addProduct = (newProd) => {
     const id = Date.now();
@@ -116,40 +111,44 @@ export function ProductProvider({ children }) {
         : newProd.ingredients || [],
     };
 
-    setProducts((prev) => [productToAdd, ...prev]);
+    const updated = [productToAdd, ...products];
+    setProducts(updated);
+    localStorage.setItem("agni_custom_products", JSON.stringify(updated));
+    persistState(updated, customerOrders, expenses);
     return productToAdd;
   };
 
   const updateProduct = (id, updatedFields) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const numericPrice = updatedFields.numericPrice !== undefined 
-            ? Number(updatedFields.numericPrice) 
-            : p.numericPrice;
-          return {
-            ...p,
-            ...updatedFields,
-            numericPrice,
-            price: `₹${numericPrice}`,
-          };
-        }
-        return p;
-      })
-    );
+    const updated = products.map((p) => {
+      if (p.id === id) {
+        const numericPrice = updatedFields.numericPrice !== undefined 
+          ? Number(updatedFields.numericPrice) 
+          : p.numericPrice;
+        return {
+          ...p,
+          ...updatedFields,
+          numericPrice,
+          price: `₹${numericPrice}`,
+        };
+      }
+      return p;
+    });
+    setProducts(updated);
+    localStorage.setItem("agni_custom_products", JSON.stringify(updated));
+    persistState(updated, customerOrders, expenses);
   };
 
   const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    const updated = products.filter((p) => p.id !== id);
+    setProducts(updated);
+    localStorage.setItem("agni_custom_products", JSON.stringify(updated));
+    persistState(updated, customerOrders, expenses);
   };
 
   const resetDefaultProducts = () => {
     setProducts(initialProducts);
-    try {
-      localStorage.removeItem("agni_custom_products");
-    } catch (e) {
-      console.error(e);
-    }
+    localStorage.setItem("agni_custom_products", JSON.stringify(initialProducts));
+    persistState(initialProducts, customerOrders, expenses);
   };
 
   const updateAdminPin = (newPin) => {
@@ -171,23 +170,32 @@ export function ProductProvider({ children }) {
       items: orderData.items || [],
       subtotal: orderData.subtotal || 0,
       totalAmount: orderData.totalAmount || orderData.subtotal || 0,
-      status: "Pending", // Default new order status
+      status: "Pending",
       date: new Date().toISOString().split("T")[0],
       freeGift: orderData.freeGift || false,
     };
 
-    setCustomerOrders((prev) => [newOrder, ...prev]);
+    const updatedOrders = [newOrder, ...customerOrders];
+    setCustomerOrders(updatedOrders);
+    localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
+    persistState(products, updatedOrders, expenses);
     return newOrder;
   };
 
   const updateOrderStatus = (orderId, newStatus) => {
-    setCustomerOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    const updatedOrders = customerOrders.map((o) =>
+      o.id === orderId ? { ...o, status: newStatus } : o
     );
+    setCustomerOrders(updatedOrders);
+    localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
+    persistState(products, updatedOrders, expenses);
   };
 
   const deleteCustomerOrder = (orderId) => {
-    setCustomerOrders((prev) => prev.filter((o) => o.id !== orderId));
+    const updatedOrders = customerOrders.filter((o) => o.id !== orderId);
+    setCustomerOrders(updatedOrders);
+    localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
+    persistState(products, updatedOrders, expenses);
   };
 
   const addExpense = (exp) => {
@@ -197,11 +205,17 @@ export function ProductProvider({ children }) {
       amount: Number(exp.amount) || 0,
       date: exp.date || new Date().toISOString().split("T")[0],
     };
-    setExpenses((prev) => [newExp, ...prev]);
+    const updatedExpenses = [newExp, ...expenses];
+    setExpenses(updatedExpenses);
+    localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
+    persistState(products, customerOrders, updatedExpenses);
   };
 
   const deleteExpense = (id) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    const updatedExpenses = expenses.filter((e) => e.id !== id);
+    setExpenses(updatedExpenses);
+    localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
+    persistState(products, customerOrders, updatedExpenses);
   };
 
   return (

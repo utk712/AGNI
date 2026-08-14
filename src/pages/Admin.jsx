@@ -144,7 +144,7 @@ function Admin() {
     alert("Owner PIN code successfully updated!");
   };
 
-  // Financial Calculations (Shipped & Delivered orders count towards Revenue)
+  // Financial Calculations
   const shippedOrders = customerOrders.filter((o) => o.status === "Shipped" || o.status === "Delivered");
   const totalRevenue = shippedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -320,7 +320,7 @@ function Admin() {
                 </button>
               </div>
 
-              {/* Recent Orders Preview */}
+              {/* Recent Orders Preview Table */}
               <div className="admin-panel-box" style={{ marginTop: "30px" }}>
                 <h3>Recent Incoming Orders</h3>
                 {customerOrders.length === 0 ? (
@@ -371,86 +371,97 @@ function Admin() {
             </div>
           )}
 
-          {/* SECTION 2: INCOMING CUSTOMER ORDERS */}
+          {/* SECTION 2: INCOMING CUSTOMER ORDERS (TABLE VIEW) */}
           {activeSection === "orders" && (
             <div className="admin-section-block">
               <div className="admin-section-header">
                 <div>
                   <span className="eyebrow"><ShoppingBag /> Automatic WhatsApp Orders</span>
-                  <h1>Customer Orders &amp; Shipping Manager</h1>
+                  <h1>Customer Orders &amp; Shipping Table</h1>
                 </div>
               </div>
 
               <div className="admin-panel-box">
                 <p className="helper-text">
-                  Orders placed by customers on your website automatically show up here. Mark an order as <strong>"Shipped"</strong> or <strong>"Delivered"</strong> to automatically count its revenue into your Accounting Ledger!
+                  Orders placed by customers on your website automatically appear in this table. Mark an order as <strong>"Shipped"</strong> or <strong>"Delivered"</strong> to count its revenue into your Accounting Ledger!
                 </p>
 
                 {customerOrders.length === 0 ? (
                   <div className="empty-state-box">
-                    <p>No orders yet. When customers order on WhatsApp, their orders will appear here automatically.</p>
+                    <p>No orders yet. When customers place orders on WhatsApp, they will show up here automatically.</p>
                   </div>
                 ) : (
-                  <div className="orders-cards-list">
-                    {customerOrders.map((o) => (
-                      <div key={o.id} className="order-details-card">
-                        <div className="order-card-head">
-                          <div>
-                            <h3>Order #{o.id}</h3>
-                            <span className="order-date">Date: {o.date}</span>
-                          </div>
-                          <div className="order-status-selector">
-                            <label>Status:</label>
-                            <select
-                              value={o.status}
-                              onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                              className={`select-status status-${o.status.toLowerCase()}`}
-                            >
-                              <option value="Pending">🟡 Pending</option>
-                              <option value="Shipped">🚚 Shipped (Counts as Sale)</option>
-                              <option value="Delivered">✅ Delivered</option>
-                              <option value="Cancelled">❌ Cancelled</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="order-card-body">
-                          <div className="order-customer-info">
-                            <p><strong>Customer:</strong> {o.customerName}</p>
-                            <p><strong>WhatsApp:</strong> <a href={`https://wa.me/${o.phone}`} target="_blank" rel="noreferrer">{o.phone}</a></p>
-                            <p><strong>Address:</strong> {o.address}</p>
-                          </div>
-
-                          <div className="order-items-summary">
-                            <h4>Items Ordered:</h4>
-                            <ul>
-                              {o.items.map((item, idx) => (
-                                <li key={idx}>
-                                  🌿 {item.name} ({item.size}) - Qty: {item.quantity} x ₹{item.price}
-                                </li>
-                              ))}
-                              {o.freeGift && <li className="free-gift-text">🎁 Free 25g Rice Powder Included</li>}
-                            </ul>
-                            <div className="order-total-price">
-                              Total Amount: <strong>₹{o.totalAmount}</strong>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="order-card-footer">
-                          <button
-                            className="admin-delete-btn"
-                            onClick={() => {
-                              if (confirm(`Delete order #${o.id}?`)) {
-                                deleteCustomerOrder(o.id);
-                              }
-                            }}
-                          >
-                            <Trash /> Delete Order Log
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="table-responsive" style={{ marginTop: "20px" }}>
+                    <table className="admin-ledger-table order-management-table">
+                      <thead>
+                        <tr>
+                          <th>Order ID &amp; Date</th>
+                          <th>Customer &amp; Contact</th>
+                          <th>Delivery Address</th>
+                          <th>Items Ordered</th>
+                          <th>Total Price</th>
+                          <th>Status &amp; Action</th>
+                          <th>Remove</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customerOrders.map((o) => (
+                          <tr key={o.id}>
+                            <td>
+                              <strong>#{o.id}</strong>
+                              <br />
+                              <span className="sub-text">{o.date}</span>
+                            </td>
+                            <td>
+                              <strong>{o.customerName}</strong>
+                              <br />
+                              <a href={`https://wa.me/${o.phone}`} target="_blank" rel="noreferrer" className="phone-link">
+                                📱 {o.phone}
+                              </a>
+                            </td>
+                            <td className="address-col">{o.address}</td>
+                            <td>
+                              <ul className="table-items-list">
+                                {o.items.map((item, idx) => (
+                                  <li key={idx}>
+                                    🌿 {item.name} ({item.size}) x{item.quantity}
+                                  </li>
+                                ))}
+                                {o.freeGift && <li className="free-gift-text">🎁 Free 25g Rice Powder Included</li>}
+                              </ul>
+                            </td>
+                            <td className="amount-green">
+                              <strong>₹{o.totalAmount}</strong>
+                            </td>
+                            <td>
+                              <select
+                                value={o.status}
+                                onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                                className={`select-status status-${o.status.toLowerCase()}`}
+                              >
+                                <option value="Pending">🟡 Pending</option>
+                                <option value="Shipped">🚚 Shipped (Counts as Sale)</option>
+                                <option value="Delivered">✅ Delivered</option>
+                                <option value="Cancelled">❌ Cancelled</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button
+                                className="admin-delete-btn"
+                                onClick={() => {
+                                  if (confirm(`Delete order #${o.id}?`)) {
+                                    deleteCustomerOrder(o.id);
+                                  }
+                                }}
+                                title="Delete Order"
+                              >
+                                <Trash />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -610,13 +621,13 @@ function Admin() {
             </div>
           )}
 
-          {/* SECTION 4: PRODUCTS & COMBOS CATALOG MANAGER */}
+          {/* SECTION 4: PRODUCTS & COMBOS CATALOG TABLE MANAGER */}
           {activeSection === "products" && (
             <div className="admin-section-block">
               <div className="admin-section-header">
                 <div>
                   <span className="eyebrow"><Sparkles /> Product Catalog</span>
-                  <h1>Products &amp; Combos Manager</h1>
+                  <h1>Products &amp; Combos Table Manager</h1>
                 </div>
               </div>
 
@@ -768,10 +779,10 @@ function Admin() {
                 </form>
               </div>
 
-              {/* Table: Existing Products List */}
+              {/* Responsive Products Table */}
               <div className="admin-panel-box">
                 <div className="panel-title-row">
-                  <h2>Existing Catalog ({products.length} items)</h2>
+                  <h2>Live Catalog Table ({products.length} items)</h2>
                   <button
                     className="btn btn-outline btn-sm danger-btn"
                     onClick={() => {
@@ -784,47 +795,69 @@ function Admin() {
                   </button>
                 </div>
 
-                <div className="admin-products-table">
-                  {products.map((prod) => (
-                    <div key={prod.id} className="admin-product-row">
-                      <img
-                        src={prod.image || "https://via.placeholder.com/60"}
-                        alt={prod.name}
-                        className="admin-prod-thumb"
-                      />
-                      <div className="admin-prod-info">
-                        <h4>{prod.name}</h4>
-                        <span className="admin-prod-meta">{prod.categoryLabel} • {prod.size}</span>
-                      </div>
-                      <div className="admin-prod-price">
-                        <span>₹</span>
-                        <input
-                          type="number"
-                          value={prod.numericPrice}
-                          onChange={(e) =>
-                            updateProduct(prod.id, { numericPrice: Number(e.target.value) })
-                          }
-                        />
-                      </div>
-                      <button
-                        className={`btn-bestseller-toggle ${prod.bestSeller ? "active" : ""}`}
-                        onClick={() => updateProduct(prod.id, { bestSeller: !prod.bestSeller })}
-                      >
-                        {prod.bestSeller ? "★ Best Seller" : "Set Bestseller"}
-                      </button>
-                      <button
-                        className="admin-delete-btn"
-                        onClick={() => {
-                          if (confirm(`Delete "${prod.name}" from store catalog?`)) {
-                            deleteProduct(prod.id);
-                          }
-                        }}
-                        title="Delete item"
-                      >
-                        <Trash />
-                      </button>
-                    </div>
-                  ))}
+                <div className="table-responsive">
+                  <table className="admin-ledger-table">
+                    <thead>
+                      <tr>
+                        <th>Photo</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Price (₹)</th>
+                        <th>Bestseller Badge</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((prod) => (
+                        <tr key={prod.id}>
+                          <td>
+                            <img
+                              src={prod.image || "https://via.placeholder.com/60"}
+                              alt={prod.name}
+                              className="admin-prod-thumb"
+                            />
+                          </td>
+                          <td><strong>{prod.name}</strong></td>
+                          <td>{prod.categoryLabel}</td>
+                          <td>{prod.size}</td>
+                          <td>
+                            <div className="admin-prod-price">
+                              <span>₹</span>
+                              <input
+                                type="number"
+                                value={prod.numericPrice}
+                                onChange={(e) =>
+                                  updateProduct(prod.id, { numericPrice: Number(e.target.value) })
+                                }
+                              />
+                            </div>
+                          </td>
+                          <td>
+                            <button
+                              className={`btn-bestseller-toggle ${prod.bestSeller ? "active" : ""}`}
+                              onClick={() => updateProduct(prod.id, { bestSeller: !prod.bestSeller })}
+                            >
+                              {prod.bestSeller ? "★ Best Seller" : "Set Bestseller"}
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              className="admin-delete-btn"
+                              onClick={() => {
+                                if (confirm(`Delete "${prod.name}" from store catalog?`)) {
+                                  deleteProduct(prod.id);
+                                }
+                              }}
+                              title="Delete item"
+                            >
+                              <Trash />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
