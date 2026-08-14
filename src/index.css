@@ -1747,6 +1747,26 @@ button {
   font-size: 16px;
 }
 
+/* --- Mobile Button Overflow & Text Wrapping Fix --- */
+.btn,
+.btn-primary,
+.btn-outline,
+.admin-tab-btn,
+.sidebar-link {
+  white-space: normal !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.admin-panel-box,
+.admin-login-card,
+.admin-lock-screen,
+.sync-section-box {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
 /* --- Mobile Card Alignment & Table Fixes --- */
 .products-grid {
   display: grid;
@@ -1754,6 +1774,7 @@ button {
   gap: 24px;
   width: 100%;
 }
+
 
 .product-card {
   display: flex;

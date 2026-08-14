@@ -3,12 +3,19 @@ import initialProducts from "../data/products";
 import { fetchCloudStore, saveCloudStore } from "../services/cloudSync";
 
 const ProductContext = createContext();
+const MASTER_PIN_DEFAULT = "231204";
 
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState(initialProducts);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [adminPin, setAdminPin] = useState("231204"); // Default Master PIN set to 231204
+  const [adminPin, setAdminPin] = useState(() => {
+    try {
+      return localStorage.getItem("agni_admin_pin") || MASTER_PIN_DEFAULT;
+    } catch {
+      return MASTER_PIN_DEFAULT;
+    }
+  });
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
   // Load from local storage cache initially
@@ -52,9 +59,6 @@ export function ProductProvider({ children }) {
         if (cloudData.adminPin) {
           setAdminPin(cloudData.adminPin);
           localStorage.setItem("agni_admin_pin", cloudData.adminPin);
-        } else {
-          setAdminPin("231204");
-          localStorage.setItem("agni_admin_pin", "231204");
         }
       }
       setIsCloudLoaded(true);
@@ -190,6 +194,7 @@ export function ProductProvider({ children }) {
 
   const purgeStaleMobileCache = async () => {
     localStorage.clear();
+    localStorage.setItem("agni_admin_pin", adminPin);
     const cloudData = await fetchCloudStore();
     if (cloudData) {
       if (cloudData.products) setProducts(cloudData.products);
