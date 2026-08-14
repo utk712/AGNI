@@ -660,7 +660,7 @@ function Admin() {
               <div className="admin-section-header">
                 <div>
                   <span className="eyebrow"><Sparkles /> Product Catalog</span>
-                  <h1>Products &amp; Combos Table Manager</h1>
+                  <h1>Products &amp; Combos Catalog Manager</h1>
                 </div>
               </div>
 
@@ -812,10 +812,10 @@ function Admin() {
                 </form>
               </div>
 
-              {/* Responsive Products Table */}
+              {/* Responsive Products Manager */}
               <div className="admin-panel-box">
                 <div className="panel-title-row">
-                  <h2>Live Catalog Table ({products.length} items)</h2>
+                  <h2>Live Catalog Manager ({products.length} items)</h2>
                   <button
                     className="btn btn-outline btn-sm danger-btn"
                     onClick={() => {
@@ -824,11 +824,61 @@ function Admin() {
                       }
                     }}
                   >
-                    Reset to Default Items
+                    Reset to Defaults
                   </button>
                 </div>
 
-                <div className="table-responsive">
+                {/* Mobile Friendly Card List for Small Screens */}
+                <div className="mobile-product-cards-list">
+                  {products.map((prod) => (
+                    <div key={prod.id} className="mobile-prod-item-card">
+                      <div className="mobile-prod-top">
+                        <img
+                          src={prod.image || "https://via.placeholder.com/60"}
+                          alt={prod.name}
+                          className="mobile-prod-img"
+                        />
+                        <div className="mobile-prod-details">
+                          <h4>{prod.name}</h4>
+                          <span className="sub-text">{prod.categoryLabel} • {prod.size}</span>
+                        </div>
+                        <button
+                          className="admin-delete-btn"
+                          onClick={() => {
+                            if (confirm(`Delete "${prod.name}" from store catalog?`)) {
+                              deleteProduct(prod.id);
+                            }
+                          }}
+                          title="Delete item"
+                        >
+                          <Trash />
+                        </button>
+                      </div>
+
+                      <div className="mobile-prod-bottom">
+                        <div className="mobile-price-input">
+                          <label>Price ₹:</label>
+                          <input
+                            type="number"
+                            value={prod.numericPrice}
+                            onChange={(e) =>
+                              updateProduct(prod.id, { numericPrice: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                        <button
+                          className={`btn-bestseller-toggle ${prod.bestSeller ? "active" : ""}`}
+                          onClick={() => updateProduct(prod.id, { bestSeller: !prod.bestSeller })}
+                        >
+                          {prod.bestSeller ? "★ Best Seller" : "Set Bestseller"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="table-responsive desktop-catalog-table">
                   <table className="admin-ledger-table">
                     <thead>
                       <tr>

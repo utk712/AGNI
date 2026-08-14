@@ -1747,17 +1747,111 @@ button {
   font-size: 16px;
 }
 
-/* --- Mobile Button Overflow & Text Wrapping Fix --- */
-.btn,
-.btn-primary,
-.btn-outline,
-.admin-tab-btn,
-.sidebar-link {
-  white-space: normal !important;
-  word-break: break-word !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+/* --- Mobile Catalog Cards & Title Row Alignment Fixes --- */
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
+
+.panel-title-row h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.panel-title-row .btn {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  flex-shrink: 0;
+}
+
+.mobile-product-cards-list {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-prod-item-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-prod-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-prod-img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.mobile-prod-details {
+  flex: 1;
+
+  h4 {
+    margin: 0 0 2px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+.mobile-prod-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.mobile-price-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+
+  input {
+    width: 70px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-catalog-table {
+    display: none !important;
+  }
+
+  .mobile-product-cards-list {
+    display: flex !important;
+  }
+
+  .panel-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-title-row .btn {
+    width: 100%;
+  }
+}
+
 
 .admin-panel-box,
 .admin-login-card,
