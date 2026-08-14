@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
-import products from "../data/products";
+import { useProducts } from "../context/ProductContext";
 import { Phone, WhatsApp, Leaf } from "./Icons";
 import { business } from "../data/business";
 
 function Footer() {
+  const { products } = useProducts();
+
   return (
     <footer className="footer">
       <div className="footer-container">
@@ -25,9 +27,9 @@ function Footer() {
         </div>
 
         <div className="footer-section">
-          <h3>Our Products</h3>
+          <h3>Our Range</h3>
           <ul className="footer-links">
-            {products.map((p) => (
+            {products.slice(0, 6).map((p) => (
               <li key={p.id}>
                 <Link to={`/product/${p.id}`}>{p.name}</Link>
               </li>
@@ -44,7 +46,10 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        (c) {new Date().getFullYear()} {business.name}. All rights reserved.
+        <span>© {new Date().getFullYear()} {business.name}. All rights reserved.</span>
+        <Link to="/admin" className="owner-lock-link" title="Owner Access Portal">
+          🔒 Owner Portal
+        </Link>
       </div>
     </footer>
   );

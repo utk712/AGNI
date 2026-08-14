@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import products from "../data/products";
+import { useProducts } from "../context/ProductContext";
 import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
@@ -9,6 +9,7 @@ import { WhatsApp, ShoppingBag, Check, ArrowRight } from "../components/Icons";
 
 function ProductDetails() {
   const { id } = useParams();
+  const { products } = useProducts();
   const { addToCart, openCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("benefits");
@@ -144,9 +145,13 @@ function ProductDetails() {
                   <div className="tab-pane">
                     <h4>Ingredients:</h4>
                     <ul>
-                      {product.ingredients.map((ing, i) => (
-                        <li key={i}>🌿 {ing}</li>
-                      ))}
+                      {product.ingredients && product.ingredients.length > 0 ? (
+                        product.ingredients.map((ing, i) => (
+                          <li key={i}>🌿 {ing}</li>
+                        ))
+                      ) : (
+                        <li>🌿 100% Organic Botanical Extracts</li>
+                      )}
                     </ul>
                   </div>
                 )}
@@ -154,7 +159,7 @@ function ProductDetails() {
                 {activeTab === "howToUse" && (
                   <div className="tab-pane">
                     <h4>Directions for Use:</h4>
-                    <p>{product.howToUse}</p>
+                    <p>{product.howToUse || "Apply to clean skin as needed."}</p>
                   </div>
                 )}
 

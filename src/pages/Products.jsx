@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import products from "../data/products";
+import { useProducts } from "../context/ProductContext";
 import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import { Search, Sparkles } from "../components/Icons";
@@ -9,10 +9,11 @@ const categoryFilters = [
   { id: "Face Care", label: "Face Care" },
   { id: "Herbal Powders", label: "Herbal Powders" },
   { id: "Lip Care", label: "Lip Care" },
-  { id: "Free Gift", label: "Free Gift Tiers" },
+  { id: "Value Combo", label: "Combos" },
 ];
 
 function Products() {
+  const { products } = useProducts();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
@@ -28,17 +29,17 @@ function Products() {
           p.name.toLowerCase().includes(query) ||
           p.tagline.toLowerCase().includes(query) ||
           p.description.toLowerCase().includes(query) ||
-          p.ingredients.some((i) => i.toLowerCase().includes(query));
+          (p.ingredients &&
+            p.ingredients.some((i) => i.toLowerCase().includes(query)));
 
         return matchesCategory && matchesSearch;
       })
       .sort((a, b) => {
         if (sortBy === "price-low") return a.numericPrice - b.numericPrice;
         if (sortBy === "price-high") return b.numericPrice - a.numericPrice;
-        if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
-        return (b.reviewsCount || 0) - (a.reviewsCount || 0); // popular default
+        return a.id - b.id;
       });
-  }, [searchQuery, activeCategory, sortBy]);
+  }, [products, searchQuery, activeCategory, sortBy]);
 
   return (
     <>
@@ -90,8 +91,7 @@ function Products() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="popular">Most Popular</option>
-                <option value="rating">Highest Rated</option>
+                <option value="popular">All Products</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
               </select>

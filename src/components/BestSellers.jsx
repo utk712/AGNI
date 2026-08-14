@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
-import products from "../data/products";
+import { useProducts } from "../context/ProductContext";
 import ProductCard from "./ProductCard";
 import { ArrowRight } from "./Icons";
 
 function BestSellers() {
-  const featured = products.slice(0, 3);
+  const { products } = useProducts();
+  const featured = products.filter((p) => p.bestSeller).slice(0, 3);
+  const displayItems = featured.length > 0 ? featured : products.slice(0, 3);
 
   return (
     <section className="best-sellers">
@@ -14,7 +16,7 @@ function BestSellers() {
       </div>
 
       <div className="products-grid">
-        {featured.map((product) => (
+        {displayItems.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

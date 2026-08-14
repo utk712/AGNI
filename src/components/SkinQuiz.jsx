@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Leaf, Check, ArrowRight, Refresh } from "./Icons";
-import products from "../data/products";
+import { Sparkles, Leaf, ArrowRight, Refresh } from "./Icons";
+import { useProducts } from "../context/ProductContext";
 import { useCart } from "../context/CartContext";
 
 const concernsList = [
@@ -19,6 +19,7 @@ const skinTypesList = [
 ];
 
 function SkinQuiz() {
+  const { products } = useProducts();
   const { addToCart, openCart } = useCart();
   const [step, setStep] = useState(1);
   const [selectedConcern, setSelectedConcern] = useState(null);
@@ -36,14 +37,13 @@ function SkinQuiz() {
 
   const getRecommendedProducts = () => {
     if (selectedConcern === "lip") {
-      return [products.find((p) => p.id === 6), products.find((p) => p.id === 1)];
+      return products.filter((p) => p.category === "lip" || p.category === "rose").slice(0, 2);
     } else if (selectedConcern === "pigment") {
-      return [products.find((p) => p.id === 5), products.find((p) => p.id === 1)];
+      return products.filter((p) => p.name.includes("ABC") || p.category === "rose").slice(0, 2);
     } else if (selectedConcern === "dry") {
-      return [products.find((p) => p.id === 3), products.find((p) => p.id === 1), products.find((p) => p.id === 6)];
+      return products.slice(0, 3);
     } else {
-      // glow default
-      return [products.find((p) => p.id === 2), products.find((p) => p.id === 1), products.find((p) => p.id === 6)];
+      return products.slice(0, 3);
     }
   };
 
@@ -151,7 +151,7 @@ function SkinQuiz() {
               <div className="result-products-list">
                 {recommendedItems.map((prod) => (
                   <div key={prod.id} className="recommended-prod-card">
-                    <img src={prod.image} alt={prod.name} />
+                    <img src={prod.image || "https://via.placeholder.com/50"} alt={prod.name} />
                     <div className="rec-info">
                       <h4>{prod.name}</h4>
                       <p>{prod.tagline}</p>
