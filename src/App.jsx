@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
 import ScrollToTop from "./components/ScrollToTop";
 import Home from "./pages/Home";
@@ -10,23 +11,29 @@ import ComboOffer from "./pages/ComboOffer";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import WhatsappButton from "./components/WhatsappButton";
+import CartDrawer from "./components/CartDrawer";
+import CartToast from "./components/CartToast";
 
 function App() {
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/combo" element={<ComboOffer />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <WhatsappButton />
-    </BrowserRouter>
+    <CartProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/product/:id" element={<ProductDetails />} />
+          <Route path="/combo" element={<ComboOffer />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <CartDrawer />
+        <CartToast />
+        <WhatsappButton />
+      </BrowserRouter>
+    </CartProvider>
   );
 }
 

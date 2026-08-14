@@ -1,11 +1,20 @@
 import { Link } from "react-router-dom";
-import { IngredientStamp, WhatsApp } from "./Icons";
+import { IngredientStamp, WhatsApp, Star, ShoppingBag, ArrowRight } from "./Icons";
 import { business, whatsappLink } from "../data/business";
+import { useCart } from "../context/CartContext";
 
 function ProductCard({ product }) {
-  const orderMessage = whatsappLink(
-    `Hello ${business.name}, I would like to order ${product.name} (${product.size}). Please share more details.`
-  );
+  const { addToCart, openCart } = useCart();
+
+  const isFreeGift = product.numericPrice === 0;
+
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isFreeGift) {
+      addToCart(product, 1);
+    }
+  };
 
   return (
     <div className="product-card">
@@ -17,23 +26,45 @@ function ProductCard({ product }) {
             <IngredientStamp kind={product.category} />
           </span>
         )}
+
+        {product.bestSeller && <span className="product-badge badge-bestseller">BESTSELLER</span>}
+        {isFreeGift && <span className="product-badge badge-free">FREE GIFT</span>}
       </Link>
 
-      <Link to={`/product/${product.id}`} className="product-card-title">
-        <h3>{product.name}</h3>
-      </Link>
+      <div className="product-card-body">
+        <div className="product-rating-row">
+          <span className="rating-stars-inline">
+            <Star className="star-filled" /> {product.rating || 4.9}
+          </span>
+          <span className="reviews-count">({product.reviewsCount || 40})</span>
+        </div>
 
-      <p className="product-card-tagline">{product.tagline}</p>
-      <p className="product-card-size">{product.size}</p>
-      <h2>{product.price}</h2>
-
-      <div className="product-card-actions">
-        <Link to={`/product/${product.id}`} className="btn btn-outline btn-sm">
-          Details
+        <Link to={`/product/${product.id}`} className="product-card-title">
+          <h3>{product.name}</h3>
         </Link>
-        <a href={orderMessage} target="_blank" rel="noreferrer" className="btn btn-whatsapp btn-sm">
-          <WhatsApp /> Order
-        </a>
+
+        <p className="product-card-tagline">{product.tagline}</p>
+
+        <div className="product-price-row">
+          <span className="product-card-size">{product.size}</span>
+          <h2 className="product-price-val">{product.price}</h2>
+        </div>
+
+        <div className="product-card-actions">
+          {!isFreeGift ? (
+            <button className="btn btn-primary btn-sm flex-1" onClick={handleAddToCart}>
+              <ShoppingBag /> Add to Bag
+            </button>
+          ) : (
+            <Link to="/combo" className="btn btn-primary btn-sm flex-1">
+              Unlock Free Gift
+            </Link>
+          )}
+
+          <Link to={`/product/${product.id}`} className="btn btn-outline btn-sm" title="View details">
+            Details
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -60,6 +60,14 @@ export function Close(props) {
   );
 }
 
+export function X(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
 export function WhatsApp(props) {
   return (
     <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" {...props}>
@@ -89,6 +97,68 @@ export function ArrowRight(props) {
   return (
     <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
       <path d="M4 12h16M14 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function ShoppingBag(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+export function Search(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+export function Sparkles(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <path d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z" />
+      <path d="M19 17l.9 2.6L22.5 20l-2.6.9L19 23.5l-.9-2.6L15.5 20l2.6-.9z" />
+    </svg>
+  );
+}
+
+export function Star(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+export function Trash(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+export function Check(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+export function Refresh(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" {...base} {...props}>
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
     </svg>
   );
 }

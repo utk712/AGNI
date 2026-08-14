@@ -1,23 +1,24 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, Close, WhatsApp } from "./Icons";
+import { Menu, Close, WhatsApp, ShoppingBag } from "./Icons";
 import { business, whatsappLink } from "../data/business";
+import { useCart } from "../context/CartContext";
 import logo from "../assets/brand/logo.jpg";
 import "./Navbar.css";
 
 const links = [
   { to: "/", label: "Home" },
-  { to: "/about", label: "About Us" },
   { to: "/products", label: "Products" },
   { to: "/combo", label: "Combo Offer" },
+  { to: "/about", label: "About Us" },
   { to: "/contact", label: "Contact" },
 ];
 
 function Navbar() {
   const [open, setOpen] = useState(false);
+  const { totalItemsCount, openCart } = useCart();
 
-  // Close the mobile menu whenever the viewport grows back to desktop size.
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setOpen(false);
@@ -31,7 +32,7 @@ function Navbar() {
       <div className="navbar-inner container">
         <NavLink to="/" className="logo" onClick={() => setOpen(false)}>
           <img src={logo} alt={business.name} className="logo-mark" />
-          Akshaya Glow Naturals
+          <span className="logo-text">Akshaya Glow Naturals</span>
         </NavLink>
 
         <div className="nav-links nav-links-desktop">
@@ -47,23 +48,31 @@ function Navbar() {
           ))}
         </div>
 
-        <a
-          href={whatsappLink(`Hello ${business.name}, I'd like to know more about your products.`)}
-          target="_blank"
-          rel="noreferrer"
-          className="whatsapp-btn nav-links-desktop"
-        >
-          <WhatsApp /> WhatsApp Order
-        </a>
+        <div className="nav-right-actions">
+          <button className="nav-cart-btn" onClick={openCart} aria-label="Open cart bag">
+            <ShoppingBag />
+            <span className="nav-cart-label">Bag</span>
+            {totalItemsCount > 0 && <span className="cart-badge">{totalItemsCount}</span>}
+          </button>
 
-        <button
-          className="nav-toggle"
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <Close /> : <Menu />}
-        </button>
+          <a
+            href={whatsappLink(`Hello ${business.name}, I'd like to place an order.`)}
+            target="_blank"
+            rel="noreferrer"
+            className="whatsapp-btn nav-links-desktop"
+          >
+            <WhatsApp /> WhatsApp
+          </a>
+
+          <button
+            className="nav-toggle"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <Close /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -87,14 +96,23 @@ function Navbar() {
                   {link.label}
                 </NavLink>
               ))}
+              <button
+                className="btn btn-outline btn-block"
+                onClick={() => {
+                  setOpen(false);
+                  openCart();
+                }}
+              >
+                <ShoppingBag /> View Bag ({totalItemsCount})
+              </button>
               <a
-                href={whatsappLink(`Hello ${business.name}, I'd like to know more about your products.`)}
+                href={whatsappLink(`Hello ${business.name}, I'd like to place an order.`)}
                 target="_blank"
                 rel="noreferrer"
                 className="whatsapp-btn"
                 onClick={() => setOpen(false)}
               >
-                <WhatsApp /> WhatsApp Order
+                <WhatsApp /> Order on WhatsApp
               </a>
             </div>
           </motion.div>
