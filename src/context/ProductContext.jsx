@@ -72,7 +72,15 @@ export function ProductProvider({ children }) {
       }
       setIsCloudLoaded(true);
     }
+
     syncWithCloudMaster();
+
+    // Auto-sync with live cloud database every 10 seconds for real-time updates!
+    const pollInterval = setInterval(() => {
+      syncWithCloudMaster();
+    }, 10000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   // Helper to persist all data to Cloud Master
