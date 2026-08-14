@@ -12,16 +12,22 @@ function Admin() {
     resetDefaultProducts,
     adminPin,
     updateAdminPin,
+    salesOrders,
+    addSalesOrder,
+    deleteSalesOrder,
+    expenses,
+    addExpense,
+    deleteExpense,
   } = useProducts();
 
   const [inputPin, setInputPin] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinError, setPinError] = useState("");
 
-  const [activeTab, setActiveTab] = useState("add"); // 'add' | 'manage' | 'pin'
+  const [activeTab, setActiveTab] = useState("accounting"); // 'accounting' | 'add' | 'manage' | 'pin'
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Form State
+  // Product Add Form State
   const [name, setName] = useState("");
   const [numericPrice, setNumericPrice] = useState("");
   const [size, setSize] = useState("");
@@ -34,7 +40,21 @@ function Admin() {
   const [imagePreview, setImagePreview] = useState(null);
   const [bestSeller, setBestSeller] = useState(false);
 
-  // New PIN state
+  // New Sale Order Form State
+  const [saleCustomer, setSaleCustomer] = useState("");
+  const [saleProdName, setSaleProdName] = useState(products[0]?.name || "Rose Water");
+  const [saleQty, setSaleQty] = useState(1);
+  const [saleAmount, setSaleAmount] = useState("");
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
+  const [saleNotes, setSaleNotes] = useState("WhatsApp Order");
+
+  // Expense Form State
+  const [expTitle, setExpTitle] = useState("");
+  const [expAmount, setExpAmount] = useState("");
+  const [expCategory, setExpCategory] = useState("Raw Materials");
+  const [expDate, setExpDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // PIN change state
   const [newPinInput, setNewPinInput] = useState("");
 
   const handleLogin = (e) => {
@@ -62,7 +82,7 @@ function Admin() {
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!name || !numericPrice || !size) {
-      alert("Please fill in the Product Name, Price, and Size.");
+      alert("Please fill in Product Name, Price, and Size.");
       return;
     }
 
@@ -101,6 +121,50 @@ function Admin() {
     setBestSeller(false);
   };
 
+  const handleRecordSale = (e) => {
+    e.preventDefault();
+    if (!saleAmount) {
+      alert("Please enter the total sale amount.");
+      return;
+    }
+
+    addSalesOrder({
+      customerName: saleCustomer || "Direct Customer",
+      productName: saleProdName,
+      quantity: Number(saleQty),
+      amount: Number(saleAmount),
+      date: saleDate,
+      notes: saleNotes,
+    });
+
+    setSuccessMsg(`Recorded sale of ₹${saleAmount} for ${saleProdName}!`);
+    setTimeout(() => setSuccessMsg(""), 4000);
+
+    setSaleCustomer("");
+    setSaleAmount("");
+  };
+
+  const handleRecordExpense = (e) => {
+    e.preventDefault();
+    if (!expTitle || !expAmount) {
+      alert("Please enter expense title and amount.");
+      return;
+    }
+
+    addExpense({
+      title: expTitle,
+      amount: Number(expAmount),
+      category: expCategory,
+      date: expDate,
+    });
+
+    setSuccessMsg(`Recorded expense of ₹${expAmount} (${expTitle})!`);
+    setTimeout(() => setSuccessMsg(""), 4000);
+
+    setExpTitle("");
+    setExpAmount("");
+  };
+
   const handlePinChange = (e) => {
     e.preventDefault();
     if (newPinInput.length < 4) {
@@ -112,13 +176,51 @@ function Admin() {
     alert("Owner PIN code successfully updated!");
   };
 
+  // Financial Calculations
+  const totalRevenue = salesOrders.reduce((sum, o) => sum + o.amount, 0);
+  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = totalRevenue - totalExpenseAmount;
+
+  // Export Financial CSV for March-Ending Tax & CA Filing
+  const exportMarchEndingCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "AKSHAYA GLOW NATURALS - FINANCIAL & SALES LEDGER REPORT\n";
+    csvContent += `Generated On: ${new Date().toLocaleDateString()}\n\n`;
+
+    csvContent += "SUMMARY METRICS\n";
+    csvContent += `Total Sales Revenue,₹${totalRevenue}\n`;
+    csvContent += `Total Expenses,₹${totalExpenseAmount}\n`;
+    csvContent += `Net Profit,₹${netProfit}\n`;
+    csvContent += `Total Orders Recorded,${salesOrders.length}\n\n`;
+
+    csvContent += "SALES & ORDERS TRANSACTIONS\n";
+    csvContent += "ID,Date,Customer Name,Product Sold,Quantity,Amount (₹),Notes\n";
+    salesOrders.forEach((o) => {
+      csvContent += `${o.id},${o.date},"${o.customerName}","${o.productName}",${o.quantity},${o.amount},"${o.notes}"\n`;
+    });
+
+    csvContent += "\nBUSINESS EXPENSES LOG\n";
+    csvContent += "ID,Date,Expense Description,Category,Amount (₹)\n";
+    expenses.forEach((e) => {
+      csvContent += `${e.id},${e.date},"${e.title}","${e.category}",${e.amount}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `AGNI_Financial_Report_March_Ending_${new Date().getFullYear()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="admin-lock-screen">
         <div className="admin-login-card">
           <div className="admin-badge">🔐 Owner Access Portal</div>
           <h2>Akshaya Glow Naturals</h2>
-          <p>Please enter your Owner PIN code to manage products &amp; combos.</p>
+          <p>Please enter your Owner PIN code to access products &amp; sales analytics.</p>
 
           <form onSubmit={handleLogin} className="admin-pin-form">
             <input
@@ -144,29 +246,29 @@ function Admin() {
       <div className="admin-dashboard-page container">
         <div className="admin-header">
           <div>
-            <span className="eyebrow"><Sparkles /> Live Store Management</span>
-            <h1>Owner Admin Dashboard</h1>
+            <span className="eyebrow"><Sparkles /> Live Store &amp; Sales Management</span>
+            <h1>Owner Analytics &amp; Control Dashboard</h1>
           </div>
           <button className="btn btn-outline btn-sm" onClick={() => setIsAuthenticated(false)}>
             🔒 Lock Portal
           </button>
         </div>
 
-        {/* Stats Row */}
+        {/* Accounting Overview Cards */}
         <div className="admin-stats-grid">
           <div className="stat-card">
-            <span className="stat-num">{products.length}</span>
-            <span className="stat-label">Total Live Products</span>
+            <span className="stat-num" style={{ color: "#2E7D32" }}>₹{totalRevenue}</span>
+            <span className="stat-label">Total Gross Revenue</span>
           </div>
           <div className="stat-card">
-            <span className="stat-num">{products.filter((p) => p.bestSeller).length}</span>
-            <span className="stat-label">Bestseller Badges</span>
+            <span className="stat-num" style={{ color: "#D32F2F" }}>₹{totalExpenseAmount}</span>
+            <span className="stat-label">Total Expenses</span>
           </div>
           <div className="stat-card">
-            <span className="stat-num">
-              {new Set(products.map((p) => p.categoryLabel)).size}
+            <span className="stat-num" style={{ color: netProfit >= 0 ? "#1976D2" : "#D32F2F" }}>
+              ₹{netProfit}
             </span>
-            <span className="stat-label">Active Categories</span>
+            <span className="stat-label">Net Profit</span>
           </div>
         </div>
 
@@ -177,29 +279,240 @@ function Admin() {
           </div>
         )}
 
-        {/* Admin Navigation Tabs */}
+        {/* Navigation Tabs */}
         <div className="admin-tabs">
+          <button
+            className={`admin-tab-btn ${activeTab === "accounting" ? "active" : ""}`}
+            onClick={() => setActiveTab("accounting")}
+          >
+            📊 Accounting &amp; March-Ending Ledger
+          </button>
           <button
             className={`admin-tab-btn ${activeTab === "add" ? "active" : ""}`}
             onClick={() => setActiveTab("add")}
           >
-            ➕ Add New Product / Combo
+            ➕ Add Product / Combo
           </button>
           <button
             className={`admin-tab-btn ${activeTab === "manage" ? "active" : ""}`}
             onClick={() => setActiveTab("manage")}
           >
-            📦 Manage Catalog ({products.length})
+            📦 Catalog Manager ({products.length})
           </button>
           <button
             className={`admin-tab-btn ${activeTab === "pin" ? "active" : ""}`}
             onClick={() => setActiveTab("pin")}
           >
-            🔑 Security PIN Settings
+            🔑 Security PIN
           </button>
         </div>
 
-        {/* TAB 1: Add New Product */}
+        {/* TAB 1: Accounting & March-Ending Ledger */}
+        {activeTab === "accounting" && (
+          <div className="admin-panel-box">
+            <div className="panel-title-row">
+              <h2>Sales Analytics &amp; March-Ending Financial Ledger</h2>
+              <button className="btn btn-primary btn-sm" onClick={exportMarchEndingCSV}>
+                📥 Export March-Ending Report (CSV)
+              </button>
+            </div>
+
+            <div className="accounting-grid-2">
+              {/* Form 1: Record Sale */}
+              <div className="ledger-card-form">
+                <h3>🛒 Record New Sale / WhatsApp Order</h3>
+                <form onSubmit={handleRecordSale}>
+                  <div className="form-group">
+                    <label>Customer Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ananya R."
+                      value={saleCustomer}
+                      onChange={(e) => setSaleCustomer(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Product Sold</label>
+                    <select
+                      value={saleProdName}
+                      onChange={(e) => setSaleProdName(e.target.value)}
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.name}>
+                          {p.name} ({p.size}) - {p.price}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Qty</label>
+                      <input
+                        type="number"
+                        value={saleQty}
+                        onChange={(e) => setSaleQty(e.target.value)}
+                        min="1"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Total Sale ₹ *</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 120"
+                        value={saleAmount}
+                        onChange={(e) => setSaleAmount(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Sale Date</label>
+                    <input
+                      type="date"
+                      value={saleDate}
+                      onChange={(e) => setSaleDate(e.target.value)}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-block">
+                    Record Sales Order
+                  </button>
+                </form>
+              </div>
+
+              {/* Form 2: Record Expense */}
+              <div className="ledger-card-form">
+                <h3>💸 Record Business Expense</h3>
+                <form onSubmit={handleRecordExpense}>
+                  <div className="form-group">
+                    <label>Expense Description *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Glass Jars, Rose Petals, Courier"
+                      value={expTitle}
+                      onChange={(e) => setExpTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Expense Category</label>
+                    <select
+                      value={expCategory}
+                      onChange={(e) => setExpCategory(e.target.value)}
+                    >
+                      <option value="Raw Materials">Raw Materials</option>
+                      <option value="Packaging">Packaging</option>
+                      <option value="Shipping/Courier">Shipping / Courier</option>
+                      <option value="Marketing/Hosting">Marketing &amp; Hosting</option>
+                    </select>
+                  </div>
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Amount ₹ *</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 350"
+                        value={expAmount}
+                        onChange={(e) => setExpAmount(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Expense Date</label>
+                      <input
+                        type="date"
+                        value={expDate}
+                        onChange={(e) => setExpDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button type="submit" className="btn btn-outline btn-block">
+                    Record Expense
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Sales Orders Log Table */}
+            <div className="ledger-table-section">
+              <h3>Recent Sales Orders ({salesOrders.length})</h3>
+              <div className="table-responsive">
+                <table className="admin-ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Customer</th>
+                      <th>Product</th>
+                      <th>Qty</th>
+                      <th>Amount</th>
+                      <th>Notes</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesOrders.map((o) => (
+                      <tr key={o.id}>
+                        <td>{o.date}</td>
+                        <td>{o.customerName}</td>
+                        <td>{o.productName}</td>
+                        <td>{o.quantity}</td>
+                        <td className="amount-green">₹{o.amount}</td>
+                        <td>{o.notes}</td>
+                        <td>
+                          <button
+                            className="admin-delete-btn"
+                            onClick={() => deleteSalesOrder(o.id)}
+                            title="Delete record"
+                          >
+                            <Trash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Expenses Log Table */}
+            <div className="ledger-table-section">
+              <h3>Business Expenses ({expenses.length})</h3>
+              <div className="table-responsive">
+                <table className="admin-ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenses.map((e) => (
+                      <tr key={e.id}>
+                        <td>{e.date}</td>
+                        <td>{e.title}</td>
+                        <td>{e.category}</td>
+                        <td className="amount-red">₹{e.amount}</td>
+                        <td>
+                          <button
+                            className="admin-delete-btn"
+                            onClick={() => deleteExpense(e.id)}
+                            title="Delete record"
+                          >
+                            <Trash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: Add New Product */}
         {activeTab === "add" && (
           <div className="admin-panel-box">
             <h2>Add New Item or Special Combo</h2>
@@ -349,7 +662,7 @@ function Admin() {
           </div>
         )}
 
-        {/* TAB 2: Manage Existing Catalog */}
+        {/* TAB 3: Manage Existing Catalog */}
         {activeTab === "manage" && (
           <div className="admin-panel-box">
             <div className="panel-title-row">
@@ -411,7 +724,7 @@ function Admin() {
           </div>
         )}
 
-        {/* TAB 3: Security PIN */}
+        {/* TAB 4: Security PIN */}
         {activeTab === "pin" && (
           <div className="admin-panel-box">
             <h2>Change Owner Security PIN</h2>

@@ -27,13 +27,56 @@ export function ProductProvider({ children }) {
     }
   });
 
+  // Sales Orders Ledger
+  const [salesOrders, setSalesOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem("agni_sales_orders");
+      return saved ? JSON.parse(saved) : [
+        { id: 1, customerName: "Pooja Sharma", productName: "Rose Water (100ml)", quantity: 2, amount: 120, date: "2026-08-01", notes: "WhatsApp Order" },
+        { id: 2, customerName: "Ananya R.", productName: "ABC Powder (100g)", quantity: 1, amount: 120, date: "2026-08-05", notes: "Combo Customer" },
+        { id: 3, customerName: "Sneha P.", productName: "Beetroot Lip Balm", quantity: 3, amount: 120, date: "2026-08-10", notes: "Direct Sale" }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  // Expenses Ledger
+  const [expenses, setExpenses] = useState(() => {
+    try {
+      const saved = localStorage.getItem("agni_expenses");
+      return saved ? JSON.parse(saved) : [
+        { id: 1, title: "Raw Rose Petals & Distillation Jars", amount: 350, category: "Raw Materials", date: "2026-08-02" },
+        { id: 2, title: "Eco-friendly Packaging Boxes & Labels", amount: 200, category: "Packaging", date: "2026-08-06" }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem("agni_custom_products", JSON.stringify(products));
     } catch (e) {
-      console.error("Error saving products to localStorage", e);
+      console.error(e);
     }
   }, [products]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("agni_sales_orders", JSON.stringify(salesOrders));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [salesOrders]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("agni_expenses", JSON.stringify(expenses));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [expenses]);
 
   const addProduct = (newProd) => {
     const id = Date.now();
@@ -92,6 +135,36 @@ export function ProductProvider({ children }) {
     }
   };
 
+  // Ledger functions
+  const addSalesOrder = (order) => {
+    const newOrder = {
+      ...order,
+      id: Date.now(),
+      amount: Number(order.amount) || 0,
+      quantity: Number(order.quantity) || 1,
+      date: order.date || new Date().toISOString().split("T")[0],
+    };
+    setSalesOrders((prev) => [newOrder, ...prev]);
+  };
+
+  const deleteSalesOrder = (id) => {
+    setSalesOrders((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const addExpense = (exp) => {
+    const newExp = {
+      ...exp,
+      id: Date.now(),
+      amount: Number(exp.amount) || 0,
+      date: exp.date || new Date().toISOString().split("T")[0],
+    };
+    setExpenses((prev) => [newExp, ...prev]);
+  };
+
+  const deleteExpense = (id) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  };
+
   return (
     <ProductContext.Provider
       value={{
@@ -102,6 +175,12 @@ export function ProductProvider({ children }) {
         resetDefaultProducts,
         adminPin,
         updateAdminPin,
+        salesOrders,
+        addSalesOrder,
+        deleteSalesOrder,
+        expenses,
+        addExpense,
+        deleteExpense,
       }}
     >
       {children}
