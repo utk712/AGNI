@@ -8,7 +8,7 @@ export function ProductProvider({ children }) {
   const [products, setProducts] = useState(initialProducts);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [adminPin, setAdminPin] = useState("1234");
+  const [adminPin, setAdminPin] = useState("231204"); // Default Master PIN set to 231204
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
   // Load from local storage cache initially
@@ -52,6 +52,9 @@ export function ProductProvider({ children }) {
         if (cloudData.adminPin) {
           setAdminPin(cloudData.adminPin);
           localStorage.setItem("agni_admin_pin", cloudData.adminPin);
+        } else {
+          setAdminPin("231204");
+          localStorage.setItem("agni_admin_pin", "231204");
         }
       }
       setIsCloudLoaded(true);

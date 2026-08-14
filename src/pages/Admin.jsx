@@ -203,7 +203,7 @@ function Admin() {
           <form onSubmit={handleLogin} className="admin-pin-form">
             <input
               type="password"
-              placeholder="Enter PIN (Default: 1234)"
+              placeholder="Enter PIN (e.g. 231204)"
               value={inputPin}
               onChange={(e) => setInputPin(e.target.value)}
               autoFocus
