@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useProducts } from "../context/ProductContext";
 import Footer from "../components/Footer";
-import { Trash, Check, Sparkles, ArrowRight, ShoppingBag } from "../components/Icons";
+import { Trash, Check, Sparkles, ArrowRight, ShoppingBag, Refresh } from "../components/Icons";
 
 function Admin() {
   const {
@@ -18,6 +18,8 @@ function Admin() {
     expenses,
     addExpense,
     deleteExpense,
+    isCloudLoaded,
+    purgeStaleMobileCache,
   } = useProducts();
 
   const [inputPin, setInputPin] = useState("");
@@ -97,7 +99,7 @@ function Admin() {
       bestSeller,
     });
 
-    setSuccessMsg(`Successfully added "${newProd.name}" to live website catalog!`);
+    setSuccessMsg(`Successfully added "${newProd.name}" to live website catalog & Cloud Master!`);
     setTimeout(() => setSuccessMsg(""), 4000);
 
     setName("");
@@ -141,7 +143,12 @@ function Admin() {
     }
     updateAdminPin(newPinInput);
     setNewPinInput("");
-    alert("Owner PIN code successfully updated!");
+    alert("Owner PIN code successfully updated in Cloud Master! Use this new PIN on all devices.");
+  };
+
+  const handlePurgeMobileCache = async () => {
+    await purgeStaleMobileCache();
+    alert("Mobile cache successfully cleared & synced with Cloud Master!");
   };
 
   // Financial Calculations
@@ -206,7 +213,9 @@ function Admin() {
               Unlock Owner Dashboard <ArrowRight />
             </button>
           </form>
-          <span className="default-pin-hint">Default PIN: <strong>1234</strong></span>
+          <div className="cloud-sync-status">
+            {isCloudLoaded ? "🟢 Cloud Master Synced" : "⏳ Syncing with Cloud Master..."}
+          </div>
         </div>
       </div>
     );
@@ -219,6 +228,9 @@ function Admin() {
         <aside className="admin-sidebar">
           <div className="sidebar-header">
             <span className="sidebar-brand">🌿 AGNI Owner Studio</span>
+            <div className="cloud-sync-chip">
+              <span className="dot-green"></span> Cloud Master Active
+            </div>
           </div>
 
           <nav className="sidebar-nav">
@@ -258,6 +270,9 @@ function Admin() {
           </nav>
 
           <div className="sidebar-footer">
+            <button className="btn btn-outline btn-block btn-sm" onClick={handlePurgeMobileCache} style={{ marginBottom: "8px" }}>
+              <Refresh /> Force Sync Cloud
+            </button>
             <button className="btn btn-outline btn-block btn-sm" onClick={() => setIsAuthenticated(false)}>
               🔒 Lock Dashboard
             </button>
@@ -774,7 +789,7 @@ function Admin() {
                   </div>
 
                   <button type="submit" className="btn btn-primary btn-lg">
-                    Publish Product to Live Website <ArrowRight />
+                    Publish Product to Live Website &amp; Cloud <ArrowRight />
                   </button>
                 </form>
               </div>
@@ -869,13 +884,13 @@ function Admin() {
               <div className="admin-section-header">
                 <div>
                   <span className="eyebrow"><Sparkles /> Security</span>
-                  <h1>Owner Security PIN</h1>
+                  <h1>Owner Security PIN &amp; Cloud Sync</h1>
                 </div>
               </div>
 
               <div className="admin-panel-box">
-                <h2>Change Owner Security PIN</h2>
-                <p>Update the PIN code used to access this Owner Portal.</p>
+                <h2>Change Owner Security PIN (Synced to Cloud)</h2>
+                <p>Updating the PIN here saves it to the Cloud Master so your Laptop, Mobile phone, and all devices share the exact same PIN!</p>
                 <form onSubmit={handlePinChange} className="admin-pin-change-form">
                   <div className="form-group">
                     <label htmlFor="new-pin">New 4-Digit Owner PIN</label>
@@ -890,9 +905,17 @@ function Admin() {
                     />
                   </div>
                   <button type="submit" className="btn btn-primary">
-                    Update Owner PIN
+                    Update Owner PIN Across All Devices
                   </button>
                 </form>
+
+                <div className="sync-section-box" style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid var(--line)" }}>
+                  <h3>📱 Mobile Cache Purge &amp; Cloud Sync</h3>
+                  <p>If your mobile phone is showing old cached data, tap the button below to force-pull the latest Cloud Master state:</p>
+                  <button className="btn btn-outline" onClick={handlePurgeMobileCache}>
+                    <Refresh /> Sync Cloud Master &amp; Clear Stale Mobile Cache
+                  </button>
+                </div>
               </div>
             </div>
           )}

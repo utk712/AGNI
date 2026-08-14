@@ -5,73 +5,38 @@ import { fetchCloudStore, saveCloudStore } from "../services/cloudSync";
 const ProductContext = createContext();
 
 export function ProductProvider({ children }) {
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agni_custom_products");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading products from localStorage", e);
-    }
-    return initialProducts;
-  });
+  const [products, setProducts] = useState(initialProducts);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [adminPin, setAdminPin] = useState("1234");
+  const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
-  const [adminPin, setAdminPin] = useState(() => {
-    try {
-      return localStorage.getItem("agni_admin_pin") || "1234";
-    } catch {
-      return "1234";
-    }
-  });
-
-  // Customer Orders
-  const [customerOrders, setCustomerOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agni_customer_orders");
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 101,
-          customerName: "Ananya Sharma",
-          phone: "9876543210",
-          address: "Flat 402, Lotus Apartments, Hyderabad - 500081",
-          items: [
-            { name: "Rose Water", size: "100ml", quantity: 2, price: 60 },
-            { name: "Beetroot Lip Balm", size: "20g", quantity: 1, price: 40 }
-          ],
-          subtotal: 160,
-          totalAmount: 160,
-          status: "Shipped",
-          date: "2026-08-12",
-          freeGift: true
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  // Expenses Ledger
-  const [expenses, setExpenses] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agni_expenses");
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: "Raw Rose Petals & Distillation Jars", amount: 350, category: "Raw Materials", date: "2026-08-02" },
-        { id: 2, title: "Eco-friendly Packaging Boxes & Labels", amount: 200, category: "Packaging", date: "2026-08-06" }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  // Cross-Device Cloud Sync on Mount
+  // Load from local storage cache initially
   useEffect(() => {
-    async function syncWithCloud() {
+    try {
+      const savedProds = localStorage.getItem("agni_custom_products");
+      if (savedProds) {
+        const parsed = JSON.parse(savedProds);
+        if (Array.isArray(parsed) && parsed.length > 0) setProducts(parsed);
+      }
+      const savedOrders = localStorage.getItem("agni_customer_orders");
+      if (savedOrders) setCustomerOrders(JSON.parse(savedOrders));
+
+      const savedExps = localStorage.getItem("agni_expenses");
+      if (savedExps) setExpenses(JSON.parse(savedExps));
+
+      const savedPin = localStorage.getItem("agni_admin_pin");
+      if (savedPin) setAdminPin(savedPin);
+    } catch (e) {
+      console.error("Local storage load error", e);
+    }
+  }, []);
+
+  // Fetch Cloud Master state (Prioritized over stale mobile cache)
+  useEffect(() => {
+    async function syncWithCloudMaster() {
       const cloudData = await fetchCloudStore();
-      if (cloudData) {
+      if (cloudData && typeof cloudData === "object") {
         if (cloudData.products && Array.isArray(cloudData.products)) {
           setProducts(cloudData.products);
           localStorage.setItem("agni_custom_products", JSON.stringify(cloudData.products));
@@ -84,17 +49,23 @@ export function ProductProvider({ children }) {
           setExpenses(cloudData.expenses);
           localStorage.setItem("agni_expenses", JSON.stringify(cloudData.expenses));
         }
+        if (cloudData.adminPin) {
+          setAdminPin(cloudData.adminPin);
+          localStorage.setItem("agni_admin_pin", cloudData.adminPin);
+        }
       }
+      setIsCloudLoaded(true);
     }
-    syncWithCloud();
+    syncWithCloudMaster();
   }, []);
 
-  // Save changes to localStorage and Cloud
-  const persistState = (newProds, newOrders, newExps) => {
+  // Helper to persist all data to Cloud Master
+  const persistState = (newProds, newOrders, newExps, newPin) => {
     const dataToSave = {
-      products: newProds || products,
-      customerOrders: newOrders || customerOrders,
-      expenses: newExps || expenses,
+      products: newProds !== undefined ? newProds : products,
+      customerOrders: newOrders !== undefined ? newOrders : customerOrders,
+      expenses: newExps !== undefined ? newExps : expenses,
+      adminPin: newPin !== undefined ? newPin : adminPin,
     };
     saveCloudStore(dataToSave);
   };
@@ -114,7 +85,7 @@ export function ProductProvider({ children }) {
     const updated = [productToAdd, ...products];
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses);
+    persistState(updated, customerOrders, expenses, adminPin);
     return productToAdd;
   };
 
@@ -135,32 +106,28 @@ export function ProductProvider({ children }) {
     });
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses);
+    persistState(updated, customerOrders, expenses, adminPin);
   };
 
   const deleteProduct = (id) => {
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
     localStorage.setItem("agni_custom_products", JSON.stringify(updated));
-    persistState(updated, customerOrders, expenses);
+    persistState(updated, customerOrders, expenses, adminPin);
   };
 
   const resetDefaultProducts = () => {
     setProducts(initialProducts);
     localStorage.setItem("agni_custom_products", JSON.stringify(initialProducts));
-    persistState(initialProducts, customerOrders, expenses);
+    persistState(initialProducts, customerOrders, expenses, adminPin);
   };
 
   const updateAdminPin = (newPin) => {
     setAdminPin(newPin);
-    try {
-      localStorage.setItem("agni_admin_pin", newPin);
-    } catch (e) {
-      console.error(e);
-    }
+    localStorage.setItem("agni_admin_pin", newPin);
+    persistState(products, customerOrders, expenses, newPin);
   };
 
-  // Automatic Order Creation from Cart Checkout
   const createCustomerOrder = (orderData) => {
     const newOrder = {
       id: Date.now(),
@@ -178,7 +145,7 @@ export function ProductProvider({ children }) {
     const updatedOrders = [newOrder, ...customerOrders];
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses);
+    persistState(products, updatedOrders, expenses, adminPin);
     return newOrder;
   };
 
@@ -188,14 +155,14 @@ export function ProductProvider({ children }) {
     );
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses);
+    persistState(products, updatedOrders, expenses, adminPin);
   };
 
   const deleteCustomerOrder = (orderId) => {
     const updatedOrders = customerOrders.filter((o) => o.id !== orderId);
     setCustomerOrders(updatedOrders);
     localStorage.setItem("agni_customer_orders", JSON.stringify(updatedOrders));
-    persistState(products, updatedOrders, expenses);
+    persistState(products, updatedOrders, expenses, adminPin);
   };
 
   const addExpense = (exp) => {
@@ -208,14 +175,25 @@ export function ProductProvider({ children }) {
     const updatedExpenses = [newExp, ...expenses];
     setExpenses(updatedExpenses);
     localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
-    persistState(products, customerOrders, updatedExpenses);
+    persistState(products, customerOrders, updatedExpenses, adminPin);
   };
 
   const deleteExpense = (id) => {
     const updatedExpenses = expenses.filter((e) => e.id !== id);
     setExpenses(updatedExpenses);
     localStorage.setItem("agni_expenses", JSON.stringify(updatedExpenses));
-    persistState(products, customerOrders, updatedExpenses);
+    persistState(products, customerOrders, updatedExpenses, adminPin);
+  };
+
+  const purgeStaleMobileCache = async () => {
+    localStorage.clear();
+    const cloudData = await fetchCloudStore();
+    if (cloudData) {
+      if (cloudData.products) setProducts(cloudData.products);
+      if (cloudData.customerOrders) setCustomerOrders(cloudData.customerOrders);
+      if (cloudData.expenses) setExpenses(cloudData.expenses);
+      if (cloudData.adminPin) setAdminPin(cloudData.adminPin);
+    }
   };
 
   return (
@@ -235,6 +213,8 @@ export function ProductProvider({ children }) {
         expenses,
         addExpense,
         deleteExpense,
+        isCloudLoaded,
+        purgeStaleMobileCache,
       }}
     >
       {children}
